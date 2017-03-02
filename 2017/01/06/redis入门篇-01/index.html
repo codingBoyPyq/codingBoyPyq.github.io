@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="Hexo," />
+  <meta name="keywords" content="redis," />
 
 
 
@@ -84,19 +84,36 @@
 
 
 
-<meta name="description" content="Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub.
-Quick">
+<meta name="description" content="前言本系列文章，只是针对redis的一个初步认识了解，对redis的数据类型的一些介绍，对redis常用命令的一些介绍，及redis的事务和消息系统，平常开发中的一些使用，适合初级小白，因为写这篇文章的时候我也是一个小白，下面开始打怪升级。
+redis 背景###首先要清楚三个问题 
+
+redis是谁搞出来的（装逼专用）
+redis是个神马玩意？
+为什么会出来这么个玩意？
+这玩意为什么会迅速的火起">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Hello World">
-<meta property="og:url" content="http://pangyq.cn/2016/11/18/hello-world/index.html">
+<meta property="og:title" content="redis入门篇-01">
+<meta property="og:url" content="http://pangyq.cn/2017/01/06/redis入门篇-01/index.html">
 <meta property="og:site_name" content="庞跃强的个人博客">
-<meta property="og:description" content="Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub.
-Quick">
-<meta property="og:updated_time" content="2016-11-18T15:55:10.000Z">
+<meta property="og:description" content="前言本系列文章，只是针对redis的一个初步认识了解，对redis的数据类型的一些介绍，对redis常用命令的一些介绍，及redis的事务和消息系统，平常开发中的一些使用，适合初级小白，因为写这篇文章的时候我也是一个小白，下面开始打怪升级。
+redis 背景###首先要清楚三个问题 
+
+redis是谁搞出来的（装逼专用）
+redis是个神马玩意？
+为什么会出来这么个玩意？
+这玩意为什么会迅速的火起">
+<meta property="og:image" content="http://pangyq.cn/uploads/redis-run.png">
+<meta property="og:updated_time" content="2017-01-07T10:41:17.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Hello World">
-<meta name="twitter:description" content="Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub.
-Quick">
+<meta name="twitter:title" content="redis入门篇-01">
+<meta name="twitter:description" content="前言本系列文章，只是针对redis的一个初步认识了解，对redis的数据类型的一些介绍，对redis常用命令的一些介绍，及redis的事务和消息系统，平常开发中的一些使用，适合初级小白，因为写这篇文章的时候我也是一个小白，下面开始打怪升级。
+redis 背景###首先要清楚三个问题 
+
+redis是谁搞出来的（装逼专用）
+redis是个神马玩意？
+为什么会出来这么个玩意？
+这玩意为什么会迅速的火起">
+<meta name="twitter:image" content="http://pangyq.cn/uploads/redis-run.png">
 
 
 
@@ -124,13 +141,13 @@ Quick">
 
 
 
-  <link rel="canonical" href="http://pangyq.cn/2016/11/18/hello-world/"/>
+  <link rel="canonical" href="http://pangyq.cn/2017/01/06/redis入门篇-01/"/>
 
 
 
 
 
-  <title> Hello World | 庞跃强的个人博客 </title>
+  <title> redis入门篇-01 | 庞跃强的个人博客 </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -301,7 +318,7 @@ Quick">
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="http://pangyq.cn/2016/11/18/hello-world/">
+  <link itemprop="mainEntityOfPage" href="http://pangyq.cn/2017/01/06/redis入门篇-01/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <meta itemprop="name" content="YueQiang Pang">
@@ -325,7 +342,7 @@ Quick">
             
             
               
-                Hello World
+                redis入门篇-01
               
             
           </h1>
@@ -338,8 +355,8 @@ Quick">
                 <i class="fa fa-calendar-o"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2016-11-18T23:55:10+08:00">
-                2016-11-18
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-01-06T11:56:45+08:00">
+                2017-01-06
               </time>
             
 
@@ -357,8 +374,8 @@ Quick">
               <span class="post-meta-item-text">分类于</span>
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Hexo/" itemprop="url" rel="index">
-                    <span itemprop="name">Hexo</span>
+                  <a href="/categories/redis/" itemprop="url" rel="index">
+                    <span itemprop="name">redis</span>
                   </a>
                 </span>
 
@@ -372,8 +389,8 @@ Quick">
             
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
-                <a href="/2016/11/18/hello-world/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/11/18/hello-world/" itemprop="commentCount"></span>
+                <a href="/2017/01/06/redis入门篇-01/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2017/01/06/redis入门篇-01/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -399,15 +416,59 @@ Quick">
       
 
       
-        <p>Welcome to <a href="https://hexo.io/" target="_blank" rel="external">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank" rel="external">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank" rel="external">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank" rel="external">GitHub</a>.</p>
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo new <span class="string">"My New Post"</span></div></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/writing.html" target="_blank" rel="external">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo server</div></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/server.html" target="_blank" rel="external">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo generate</div></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/generating.html" target="_blank" rel="external">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo deploy</div></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/deployment.html" target="_blank" rel="external">Deployment</a></p>
+        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>本系列文章，只是针对redis的一个初步认识了解，对redis的数据类型的一些介绍，对redis常用命令的一些介绍，及redis的事务和消息系统，平常开发中的一些使用，适合初级小白，因为写这篇文章的时候我也是一个小白，下面开始打怪升级。</p>
+<h2 id="redis-背景"><a href="#redis-背景" class="headerlink" title="redis 背景"></a>redis 背景</h2><p>###首先要清楚三个问题 </p>
+<ul>
+<li>redis是谁搞出来的（装逼专用）</li>
+<li>redis是个神马玩意？</li>
+<li>为什么会出来这么个玩意？</li>
+<li>这玩意为什么会迅速的火起来的？</li>
+</ul>
+<p>2008年，意大利的一家创业公司 Merzia 推出了一款基于mysql的网站实时统计系统 LLOOGG,然而没过多久该公司的创始人 Salvatore Sanfilippo 便开始对mysql的性能感到失望，这家伙也是艺高人胆大，亲自为 LLOOGG量身定做了一个数据库，2009年开发完成，这个数据库就是redis，并大发善心，将redis开源，很快在程序员界圈粉无数，国内大量的互联网公司相继使用，例如新浪微博，知乎，街旁网等。国外的github，暴雪，等一大批粉丝。圈粉狂魔也不为过，小编我也没逃脱它的魔抓。</p>
+<p>Redis 是一个高性能的key-value数据库。主要是存储数据，纳尼，数据库小编可是知道不少，比如mysql,oricle 这两个风靡全球的数据库。这就要说一下redis与mysql区别了。最本质的区别是两者数据存放的位置，和 存储的数据结构。mysql这类关系型数据库数据主要存储在本地磁盘，且存储的都是结构型数据，众所周知的mysql中的那一张一张的表，每个表每一行的数据结构都是固定的。redis主要把数据存储在内存中，也可持久化存储，或者log存储，且存储数据格式为非结构化数据。</p>
+<p>redis 的出现主要解决的是，伴随着互联网的高速发展，大数据量，高并发，越来越多的非结构话数据的存储需求，传统的关系型数据库大量的Io读取，性能很快出现瓶颈，越来越无法满足web2.0 频繁的页面交互。一些场景无法满足。而redis 灵活的数据模型，高性能的读写能力，良好的扩展性 极大的满足了关系型数据库的一些不足。</p>
+<p>nosql和关系型数据库的区别 <a href="http://www.infoq.com/cn/news/2011/01/nosql-why/" target="_blank" rel="external">here</a></p>
+<h2 id="redis的安装"><a href="#redis的安装" class="headerlink" title="redis的安装"></a>redis的安装</h2><p>主要是针对 linux 系统，本文测试系统主要 mac os x 10.10.5</p>
+<p>官方网站：[here] (<a href="http://redis.io" target="_blank" rel="external">http://redis.io</a>)</p>
+<p>安装 </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">$ wget http://download.redis.io/releases/redis-3.2.6.tar.gz</div><div class="line">$ tar xzf redis-3.2.6.tar.gz</div><div class="line">$ cd redis-3.2.6</div><div class="line">$ make</div></pre></td></tr></table></figure>
+<p>进入根目录的src目录，里面罗列了好多redis可执行的程序命令 其中分不同的语言版本</p>
+<table>
+<thead>
+<tr>
+<th>文件名</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>redis-server</td>
+<td>redis 服务器启动程序</td>
+</tr>
+<tr>
+<td>redis-cli</td>
+<td>redis 命令行客户端</td>
+</tr>
+<tr>
+<td>redis-benchmark</td>
+<td>redis 性能测试工具</td>
+</tr>
+<tr>
+<td>redis-check-aof</td>
+<td>AOF文件修复工具</td>
+</tr>
+<tr>
+<td>redis-check-dump</td>
+<td>RDB文件检查工具</td>
+</tr>
+</tbody>
+</table>
+<p>启动redis</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">pangyueqiangdediannao:src pangyueqiang$ ./redis-server</div><div class="line">//自定义端口启动  ./redis-server --port 6380 </div><div class="line">//当然这些都可以在自定义 redis.config 里面配置，启动的时候加载自定义配置文件就行了。</div></pre></td></tr></table></figure>
+<p><img src="/uploads/redis-run.png" alt="启动界面"></p>
+<p>启动信息可以看到，warning：没有自定义个性化的config，系统自动加载默认的config。如果想加载自定义配置，启动时，在后面追加上 自定义的redis.config配置文件路径 这个参数，就会按照自定义的配置信息启动。进程id：3264，端口号：6379 ，端口号是九宫格键盘上 MERZ 对应的数字，MERZ 是意大利一名歌女的名字。看来写的一首好代码也是有用的，哼哼。。</p>
+<p>另起一个窗口，进入redis根目录/src 下，启动redis命令行客户端。先set一个值look一下。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">pangyueqiangdediannao:src pangyueqiang$ ./redis-cli</div><div class="line">//当然也可以指定ip 和端口进行连接 </div><div class="line">//./redis-cli </div><div class="line">127.0.0.1:6379&gt; get foo</div><div class="line">(nil)</div><div class="line">127.0.0.1:6379&gt; set foo hello word</div><div class="line">(error) ERR syntax error</div><div class="line">127.0.0.1:6379&gt; set foo &quot;hello word&quot;</div><div class="line">OK</div><div class="line">127.0.0.1:6379&gt; get foo</div><div class="line">&quot;hello word&quot;</div><div class="line">127.0.0.1:6379&gt;</div></pre></td></tr></table></figure>
 
       
     </div>
@@ -436,7 +497,7 @@ Quick">
       
         <div class="post-tags">
           
-            <a href="/tags/Hexo/" rel="tag"># Hexo</a>
+            <a href="/tags/redis/" rel="tag"># redis</a>
           
         </div>
       
@@ -445,14 +506,18 @@ Quick">
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
+              <a href="/2016/11/19/测试draft/" rel="next" title="测试draft">
+                <i class="fa fa-chevron-left"></i> 测试draft
+              </a>
+            
           </div>
 
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2016/11/19/测试draft/" rel="prev" title="测试draft">
-                测试draft <i class="fa fa-chevron-right"></i>
+              <a href="/2017/01/07/redis入门篇-02/" rel="prev" title="redis入门篇-02">
+                redis入门篇-02 <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -485,8 +550,8 @@ Quick">
           
   <div class="comments" id="comments">
     
-      <div class="ds-thread" data-thread-key="2016/11/18/hello-world/"
-           data-title="Hello World" data-url="http://pangyq.cn/2016/11/18/hello-world/">
+      <div class="ds-thread" data-thread-key="2017/01/06/redis入门篇-01/"
+           data-title="redis入门篇-01" data-url="http://pangyq.cn/2017/01/06/redis入门篇-01/">
       </div>
     
   </div>
@@ -594,7 +659,7 @@ Quick">
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Quick-Start"><span class="nav-number">1.</span> <span class="nav-text">Quick Start</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Create-a-new-post"><span class="nav-number">1.1.</span> <span class="nav-text">Create a new post</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Run-server"><span class="nav-number">1.2.</span> <span class="nav-text">Run server</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Generate-static-files"><span class="nav-number">1.3.</span> <span class="nav-text">Generate static files</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Deploy-to-remote-sites"><span class="nav-number">1.4.</span> <span class="nav-text">Deploy to remote sites</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#redis-背景"><span class="nav-number">2.</span> <span class="nav-text">redis 背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#redis的安装"><span class="nav-number">3.</span> <span class="nav-text">redis的安装</span></a></li></ol></div>
             
 
           </div>
