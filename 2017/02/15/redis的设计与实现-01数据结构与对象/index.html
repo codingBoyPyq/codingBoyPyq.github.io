@@ -96,7 +96,12 @@ redis 是由C语言实现的，但是并没有直接使用C语言定义的字符
 <meta property="og:image" content="http://pangyq.cn/uploads/list.png">
 <meta property="og:image" content="http://pangyq.cn/uploads/haxitable.png">
 <meta property="og:image" content="http://pangyq.cn/uploads/k1k0.png">
-<meta property="og:updated_time" content="2017-03-03T04:13:11.000Z">
+<meta property="og:image" content="http://pangyq.cn/uploads/dictType.png">
+<meta property="og:image" content="http://pangyq.cn/uploads/dict.png">
+<meta property="og:image" content="http://pangyq.cn/uploads/linkhashnode.png">
+<meta property="og:image" content="http://pangyq.cn/uploads/skiplist.png">
+<meta property="og:image" content="http://pangyq.cn/uploads/visiteskiplist.png">
+<meta property="og:updated_time" content="2017-03-03T19:13:20.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="redis的设计与实现-01数据结构与对象">
 <meta name="twitter:description" content="01-简单动态字符串 SDS   simple-dynamic-string
@@ -564,6 +569,66 @@ redis 是由C语言实现的，但是并没有直接使用C语言定义的字符
 <p><img src="/uploads/k1k0.png" alt="连接在一起的键k1和k0"></p>
 <h4 id="字典"><a href="#字典" class="headerlink" title="字典"></a>字典</h4><p>redis中的字典 由dict.h/dict 结构表示；</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">typedef struct dict &#123;</div><div class="line">	//类型特定函数</div><div class="line">	dictType *type；</div><div class="line">	//私有数据</div><div class="line">	void *privdata;</div><div class="line">	//哈希表</div><div class="line">	dictht ht[2];</div><div class="line">	//rehash 索引</div><div class="line">	//当rehash 不进行索引时，值为-1</div><div class="line">	int trehashidx;</div><div class="line">&#125;dict;</div></pre></td></tr></table></figure>
+<p>字典里为什么能够存储不同类型的对象，就是因为 type 属性 和 privdata 属性，构建了一个多态字典。</p>
+<ul>
+<li>type属性是一个指向dictType结构的指针，每个dictType 结构保存了一簇用于操作特定类型键值对的函数，redis会为用途不同的字典设置不同的类型特定函数。</li>
+<li>而privdata 属性则保存了需要传给那些类型特定函数的可选参数；</li>
+</ul>
+<p><img src="/uploads/dictType.png" alt="dictType 结构"></p>
+<p>ht属性是一个包含两个项的数组，数组中的每个项都是一个dictht哈希表,一般情况下，字典只用ht[0]哈希表，ht[1]哈希表只在对ht[0]哈希表进行rehash时使用。</p>
+<p>rehashidx 属性，他记录了rehash目前的进度，如果目前没有进行rehash，他的值为-1；</p>
+<p><img src="/uploads/dict.png" alt="dict 结构"></p>
+<h4 id="哈希算法"><a href="#哈希算法" class="headerlink" title="哈希算法"></a>哈希算法</h4><p>哈希表是一个散列表，他是怎么把存储的对象散列到 dictEntry这个数组中区的？</p>
+<p>当一个新的键要添加到字典中去时，程序现根据键值对的键计算出哈希值和索引值，然后在根据索引值，将包含新键值对的哈希表节点，放到哈希表数组的指定索引上。</p>
+<p>redis 计算哈希值和索引值的方法如下：</p>
+<ul>
+<li><p>使用字典设置的哈希函数，计算键的哈希值 </p>
+<blockquote>
+<p>hash = dict -&gt; type -&gt; hashFunction(key)</p>
+</blockquote>
+</li>
+<li><p>使用哈希表的sizemask属性和哈希值，计算出索引值</p>
+<blockquote>
+<p>index = hash &amp; dict -&gt; ht[x].sizemask;</p>
+</blockquote>
+</li>
+</ul>
+<p>当字典被用作数据库的底层实现，或者哈希键的底层实现时，redis使用<strong>MurmurHash2</strong> 算法来计算键的哈希值，该算法的优点在于，即使输入的键是有规律的，算法仍能给出一个很好的随机分布性，达到散列的效果。MurmurHash 算法目前的版本有MurmurHash3。</p>
+<h4 id="解决键的冲突问题"><a href="#解决键的冲突问题" class="headerlink" title="解决键的冲突问题"></a>解决键的冲突问题</h4><p>由上面的算法可以看出，即使计算出的哈希值不一样，但是 与 sizemask 位运算后 也有可能取得相同的索引值。当多个键被分配到哈希数组同一个索引上时，我们称这些键发生了冲突。</p>
+<p>redis 采用链地址法来解决这些冲突。每个哈希表节点都有一个next指针，多个相同的哈希表节点可以利用next指针连成一个单向链表。</p>
+<p><img src="/uploads/linkhashnode.png" alt="链地址发解决键冲突"></p>
+<h4 id="rehash"><a href="#rehash" class="headerlink" title="rehash"></a>rehash</h4><p>随着操作不断的进行，哈希表保存的键值对会逐渐的增多或者减少，为了让哈希表的<strong>负载因子</strong>维持在一个合理的范围内，当哈希表保存的键值对数量太对，或者太少时，程序对哈希表进行相应的扩展和收缩；扩展和收缩可以通过执行rehash（重新散列）操作来完成步骤如下：</p>
+<blockquote>
+<p>负载因子 = ht[0].used / ht[0].size</p>
+</blockquote>
+<ul>
+<li>为字典的ht[1]哈希表分配空间，取决于要执行的操作，及当前ht[0]的包含的键值对的大小（ht[0].used）</li>
+</ul>
+<blockquote>
+<p>扩展： ht[1].size = 第一个大于等于 ht[0].used<code>*</code>2的2<sup>n</sup> ,如果ht[0].used = 4 , 那么 ht[1].size  = 第一个大于等于 4<code>*</code>2 =8 的2<sup>3</sup> = 8</p>
+<p>收缩： ht[1].size = 第一个大于等于 ht[0].used的2<sup>n</sup> ,如果ht[0].used = 4 , 那么 ht[1].size  = 第一个大于等于 4  的2<sup>2</sup> = 4</p>
+</blockquote>
+<ul>
+<li>将保存ht[0]上的所有键，rehash到ht[1]上，即根据ht[1]的sizemask等从新计算哈希值，和索引值。</li>
+<li>此时ht[0] 变成空表，释放ht[0],将ht[1]设置为ht[0]，并新建一个空的ht[1] ，为下次的rehash做准备。</li>
+</ul>
+<h4 id="哈希表的扩展和收缩"><a href="#哈希表的扩展和收缩" class="headerlink" title="哈希表的扩展和收缩"></a>哈希表的扩展和收缩</h4><ol>
+<li>服务器目前没有执行BGSAVE 和 BGREWRITEAOF 时，并且哈希表的负载因子大于1 扩展</li>
+<li>服务器目前正在执行BGSAVE 和 BGREWRITEAOF 时，并且哈希表的负载因子大于5 扩展</li>
+<li>当哈希表的负载因子小于0.1 时，程序对哈希表进行收缩操作。</li>
+</ol>
+<h4 id="渐进式rehash"><a href="#渐进式rehash" class="headerlink" title="渐进式rehash"></a>渐进式rehash</h4><p>当ht[0]里保存了上亿级别的数据时，如果一次性的rehash，庞大的计算量势必导致redis短时间内停服。为了避免这一状况，而是分多次，渐进式的将ht[0]里的数据慢慢的rehash到ht[1]上去；</p>
+<p>特点: 渐进式rehash，字典会同时持有ht[0] ,ht[1]两个表，字典的删除，查找，更新操作，会在ht[0],ht[1]两个表中进行，比如查找某个键，会在ht[0]查找，找不到会在ht[1]查找。但是新加入的键，只会添加到ht[1]中，这样保证ht[0]包含的键只会随着rehash操作，不断的减少，直至变成空表。</p>
+<h2 id="跳跃表"><a href="#跳跃表" class="headerlink" title="跳跃表"></a>跳跃表</h2><p>跳跃表是一种有序数据结构，他通过在每个节点中维持多个指向其他节点的指针，从而达到快速访问节点的目的。</p>
+<p>跳跃表支持平均O(log<sup>N</sup>) ,最坏O(N)的复杂度查找。</p>
+<p>在大部分情况下，跳跃表的效率可以和平衡二叉树相媲美，而且跳跃表的实现比平衡二叉树更为简单。</p>
+<p>redis使用跳跃表作为有序集合的底层实现之一。</p>
+<p>redis 的跳跃表由redis.h/zskiplistNode 和 redis.h/zskiplist两个结构定义：其中zskiplistNode 表示跳跃表中的节点，zskiplist 保存了跳跃表中的信息；</p>
+<p><img src="/uploads/skiplist.png" alt="一个跳跃表的结构"></p>
+<p>跳跃表节点：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">typedef struct zskiplistNode&#123;</div><div class="line">struct zskiplistNode *backward;</div><div class="line">double score;</div><div class="line">robj *obj;</div><div class="line">struct zskiplistLevel&#123;</div><div class="line">struct zskiplistNode *forward;</div><div class="line">unsigned int span;</div><div class="line">&#125;level[];</div><div class="line">&#125;zskiplistNode;</div></pre></td></tr></table></figure>
+<p>每次创建一个跳跃表节点，程序都会根据幂次定律，随机生成一个介于1和32 之间的数值作为该节点的层数。</p>
+<p><img src="/uploads/visiteskiplist.png" alt="遍历一个跳跃表"></p>
 
       
     </div>
@@ -754,7 +819,7 @@ redis 是由C语言实现的，但是并没有直接使用C语言定义的字符
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#01-简单动态字符串-SDS-simple-dynamic-string"><span class="nav-number">1.</span> <span class="nav-text">01-简单动态字符串 SDS   simple-dynamic-string</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#sds的定义"><span class="nav-number">1.0.1.</span> <span class="nav-text">sds的定义</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#sds与C字符串的区别"><span class="nav-number">1.0.2.</span> <span class="nav-text">sds与C字符串的区别</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#02-链表"><span class="nav-number">2.</span> <span class="nav-text">02-链表</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#链表的定义"><span class="nav-number">2.0.1.</span> <span class="nav-text">链表的定义</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#reids的链表实现的特性："><span class="nav-number">2.0.2.</span> <span class="nav-text">reids的链表实现的特性：</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#03-字典"><span class="nav-number">3.</span> <span class="nav-text">03 字典</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#字典的实现"><span class="nav-number">3.0.1.</span> <span class="nav-text">字典的实现</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#哈希表节点"><span class="nav-number">3.0.2.</span> <span class="nav-text">哈希表节点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#字典"><span class="nav-number">3.0.3.</span> <span class="nav-text">字典</span></a></li></ol></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#01-简单动态字符串-SDS-simple-dynamic-string"><span class="nav-number">1.</span> <span class="nav-text">01-简单动态字符串 SDS   simple-dynamic-string</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#sds的定义"><span class="nav-number">1.0.1.</span> <span class="nav-text">sds的定义</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#sds与C字符串的区别"><span class="nav-number">1.0.2.</span> <span class="nav-text">sds与C字符串的区别</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#02-链表"><span class="nav-number">2.</span> <span class="nav-text">02-链表</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#链表的定义"><span class="nav-number">2.0.1.</span> <span class="nav-text">链表的定义</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#reids的链表实现的特性："><span class="nav-number">2.0.2.</span> <span class="nav-text">reids的链表实现的特性：</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#03-字典"><span class="nav-number">3.</span> <span class="nav-text">03 字典</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#字典的实现"><span class="nav-number">3.0.1.</span> <span class="nav-text">字典的实现</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#哈希表节点"><span class="nav-number">3.0.2.</span> <span class="nav-text">哈希表节点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#字典"><span class="nav-number">3.0.3.</span> <span class="nav-text">字典</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#哈希算法"><span class="nav-number">3.0.4.</span> <span class="nav-text">哈希算法</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#解决键的冲突问题"><span class="nav-number">3.0.5.</span> <span class="nav-text">解决键的冲突问题</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#rehash"><span class="nav-number">3.0.6.</span> <span class="nav-text">rehash</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#哈希表的扩展和收缩"><span class="nav-number">3.0.7.</span> <span class="nav-text">哈希表的扩展和收缩</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#渐进式rehash"><span class="nav-number">3.0.8.</span> <span class="nav-text">渐进式rehash</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#跳跃表"><span class="nav-number">4.</span> <span class="nav-text">跳跃表</span></a></li></ol></div>
             
 
           </div>
