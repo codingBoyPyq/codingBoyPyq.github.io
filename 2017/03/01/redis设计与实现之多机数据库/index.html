@@ -104,7 +104,11 @@ SLAVEOF命令 或者 配置 slaveof 选项
 服务器B: 127.0.0.1:6380">
 <meta property="og:image" content="http://pangyq.cn/uploads/psync.png">
 <meta property="og:image" content="http://pangyq.cn/uploads/copyBuf.png">
-<meta property="og:updated_time" content="2017-03-03T11:19:46.000Z">
+<meta property="og:image" content="http://pangyq.cn/uploads/psync.png">
+<meta property="og:image" content="http://pangyq.cn/uploads/replconf_ack.png">
+<meta property="og:image" content="http://pangyq.cn/uploads/sentinel1.png">
+<meta property="og:image" content="http://pangyq.cn/uploads/sentinel2.png">
+<meta property="og:updated_time" content="2017-03-03T16:12:38.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="redis设计与实现-----多机数据库">
 <meta name="twitter:description" content="15章—复制相关命令 和 概念
@@ -498,6 +502,61 @@ SLAVEOF命令 或者 配置 slaveof 选项
 </ul>
 <h3 id="15-4-3-服务器运行id"><a href="#15-4-3-服务器运行id" class="headerlink" title="15.4.3 服务器运行id"></a>15.4.3 服务器运行id</h3><p>每个服务器启动之后，不论主从，都会自动生成自己的运行id，由40个随机的十六进制字符组成。</p>
 <p>当从服务器第一次执行复制请求时，主服务器就会把自己的ID传给从服务器，就相当于一个定情信物，从服务器就保存到本地，以后再见面时，拿出来给主服务器验证一下，主服务器发现id是自己的，就认为你是自己的人，就尝试执行部分同步（当然也要验证偏移量），如果发现不是自己的人，直接执行全量同步。</p>
+<h3 id="15-5-psync-流程"><a href="#15-5-psync-流程" class="headerlink" title="15.5 psync 流程"></a>15.5 psync 流程</h3><p><img src="/uploads/psync.png" alt="psync流程图"></p>
+<h2 id="15-6-复制的实现"><a href="#15-6-复制的实现" class="headerlink" title="15.6 复制的实现"></a>15.6 复制的实现</h2><ul>
+<li><p>设置主服务器的地址和端口</p>
+<blockquote>
+<p>   slaveof 是一个异步命令，异步记录主服务器的ip和端口，成功后立即返回ok,表示复制命令已经被接受。</p>
+</blockquote>
+</li>
+<li><p>建立套接字连接</p>
+<blockquote>
+<p>从服务器，根据ip和端口建立套接字，并关联一个文件事件处理器，用来处理主服务器发送的rdb文件。主服务器接受套接字信息后，为该套接字创建客户端状态，从把服务器当做一个客户端，从服务器即是服务器，又是客户端，一方面向主服务器发送命令请求，一方面负责接受主服务器的返回值。</p>
+</blockquote>
+</li>
+<li>发送ping命令<blockquote>
+<p>主要作用是，验证一下，咱们刚才建立的套接字连接，是否正确，网络连接是否可以进行复制。并根据主服务器返回的值，来判断主服务器是否已经准备好，处于空闲状态，可以进行复制，否者重服务器将重新建立套接字进行上述流程。</p>
+</blockquote>
+</li>
+<li>身份验证<blockquote>
+<p>连接上了，得验证一下身份啊，不是谁连上都能进行复制的，如果主从服务器都没有设置密码，那就直接进行下一步，如果两者有一个没有设置密码，或者密码不一样，那么拒绝进行复制。</p>
+</blockquote>
+</li>
+<li>发送端口验证<blockquote>
+<p>从服务器向主服务器发送从服务器的监听端口信息，replconf listening-port \<portnumber\>，然后主服务器接受到后，会记录在slave_listening_port 属性中，该属性唯一作用就是，在主服务器执行 info replication 命令打印从服务器端口号。 </portnumber\></p>
+</blockquote>
+</li>
+<li>同步<blockquote>
+<p>完全同步，或者部分同步</p>
+</blockquote>
+</li>
+<li>命令传播<blockquote>
+<p>主服务器的修改命令，传播给从服务执行。</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="15-7-心跳检测"><a href="#15-7-心跳检测" class="headerlink" title="15.7 心跳检测"></a>15.7 心跳检测</h2><p>在命令传播阶段，从服务器默认以每秒一次的频率，向主服务器发送命令；</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">//replication_offset 为从服务器的当前复制偏移量</div><div class="line">replconf ack &lt;replication_offset&gt;</div></pre></td></tr></table></figure>
+<h3 id="心跳检测的作用"><a href="#心跳检测的作用" class="headerlink" title="心跳检测的作用"></a>心跳检测的作用</h3><ul>
+<li>检测主从服务器的连接状态</li>
+<li>辅助实现min-slaves选项</li>
+<li>检测命令丢失</li>
+</ul>
+<h3 id="15-7-1-检测主从服务器的连接状态"><a href="#15-7-1-检测主从服务器的连接状态" class="headerlink" title="15.7.1 检测主从服务器的连接状态"></a>15.7.1 检测主从服务器的连接状态</h3><p>主从服务器通过发送和接收replconf ack 命令来检查两者之间的网络状态是否正常。如果主服务器超过1s没有收到来自从服务器的请安，主服务器就会认为与这个从服务器失去连接。</p>
+<p>通过在主服务器执行 info replication 命令可以列出从服务器列表的请安状态信息；</p>
+<p><img src="/uploads/replconf_ack.png" alt="info replication 命令查询从服务器状态"></p>
+<p>一般情况下，lag的值应该在0秒或者1秒之间跳动，超过1s说明主从之间连接出现问题。</p>
+<h3 id="15-7-2-辅助实现min-slaves选项"><a href="#15-7-2-辅助实现min-slaves选项" class="headerlink" title="15.7.2 辅助实现min-slaves选项"></a>15.7.2 辅助实现min-slaves选项</h3><p>意思是在什么情况下，告知主服务器，整个主从模式已经瘫痪，主服务器不要在进行写操作了，拒绝所有的写请求。</p>
+<p>redis的min-slaves-to-write 和 min-slaves-max-lag 两个选项可以防止主服务器在不安全的情况下执行写命令。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">min-slaves-to-write 3</div><div class="line">min-slaves-max-lag 10</div></pre></td></tr></table></figure>
+<p>该配置意思就是，从服务器的数量小于3个，或者3个重服务器的延迟值都大于10秒，主服务将拒绝执行写命令。</p>
+<h3 id="15-7-2-检测命令丢失"><a href="#15-7-2-检测命令丢失" class="headerlink" title="15.7.2 检测命令丢失"></a>15.7.2 检测命令丢失</h3><p>可以看到，心跳检测中从服务器会传递一个自己的复制偏移量给主服务器。主要是为了防止，因为网络故障，主服务器的写命令，在半路上丢失，当下次从服务器再发生一个心跳时，主服务器看到从服务器的复制偏移量落后，就知道之前发送的写命令没有安全送达，就会从复制缓冲区补发上次丢失的写命令。</p>
+<p>replconf ack 和 复制积压缓冲区都是redis 2.8 以后新加入的特性，在之前的版本中，即使命令中途丢失，主从服务器都不会感知到，主服务器也不会补发丢失的写命令，会造成主从服务器数据的不一致性。建议使用2.8及以上版本。</p>
+<h2 id="sentinel-redis哨兵机制"><a href="#sentinel-redis哨兵机制" class="headerlink" title="sentinel redis哨兵机制"></a>sentinel redis哨兵机制</h2><p>sentinel 是redis的高可用性解决方案：由一个或者多个sentinel实例组成的sentinel系统，可以监视任意多个主服务器，以及他们下面的从服务器，并且在监视的主服务器进入下线状态时，自动将该主服务器下属的某个从服务器升级为主服务器，然后由新的主服务器代替已下线的主服务器继续处理请求，当已下线的主服务器上线后，自动给他降级为当前主服务器的从服务器。</p>
+<p>主服务器下线</p>
+<p><img src="/uploads/sentinel1.png" alt="服务器与sentinel系统"></p>
+<p>sentinel进行故障转移</p>
+<p><img src="/uploads/sentinel2.png" alt="服务器与sentinel系统"></p>
 
       
     </div>
@@ -688,7 +747,7 @@ SLAVEOF命令 或者 配置 slaveof 选项
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#15章—复制"><span class="nav-number">1.</span> <span class="nav-text">15章—复制</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#相关命令-和-概念"><span class="nav-number">1.0.1.</span> <span class="nav-text">相关命令 和 概念</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#15-1-旧版复制功能的实现"><span class="nav-number">2.</span> <span class="nav-text">15.1 旧版复制功能的实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#15-1-1同步"><span class="nav-number">2.1.</span> <span class="nav-text">15.1.1同步</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#sync-执行的流程"><span class="nav-number">2.1.1.</span> <span class="nav-text">sync 执行的流程</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#15-1-2命令传播"><span class="nav-number">2.2.</span> <span class="nav-text">15.1.2命令传播</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#15-2-旧版复制功能的缺陷。"><span class="nav-number">3.</span> <span class="nav-text">15.2 旧版复制功能的缺陷。</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#15-3-新版复制功能的实现"><span class="nav-number">4.</span> <span class="nav-text">15.3 新版复制功能的实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#PSYNC特点"><span class="nav-number">4.1.</span> <span class="nav-text">PSYNC特点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#15-4-部分重同步的实现"><span class="nav-number">5.</span> <span class="nav-text">15.4 部分重同步的实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#15-4-1-复制偏移量"><span class="nav-number">5.1.</span> <span class="nav-text">15.4.1 复制偏移量</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#情景："><span class="nav-number">5.1.1.</span> <span class="nav-text">情景：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#问题"><span class="nav-number">5.1.2.</span> <span class="nav-text">问题</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#15-4-2-复制积压缓冲区"><span class="nav-number">5.2.</span> <span class="nav-text">15.4.2 复制积压缓冲区</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#上一小节答案："><span class="nav-number">5.2.1.</span> <span class="nav-text">上一小节答案：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#如何通过设置来有效的让redis执行部分同步操作："><span class="nav-number">5.2.2.</span> <span class="nav-text">如何通过设置来有效的让redis执行部分同步操作：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#15-4-3-服务器运行id"><span class="nav-number">5.3.</span> <span class="nav-text">15.4.3 服务器运行id</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#15章—复制"><span class="nav-number">1.</span> <span class="nav-text">15章—复制</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#相关命令-和-概念"><span class="nav-number">1.0.1.</span> <span class="nav-text">相关命令 和 概念</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#15-1-旧版复制功能的实现"><span class="nav-number">2.</span> <span class="nav-text">15.1 旧版复制功能的实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#15-1-1同步"><span class="nav-number">2.1.</span> <span class="nav-text">15.1.1同步</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#sync-执行的流程"><span class="nav-number">2.1.1.</span> <span class="nav-text">sync 执行的流程</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#15-1-2命令传播"><span class="nav-number">2.2.</span> <span class="nav-text">15.1.2命令传播</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#15-2-旧版复制功能的缺陷。"><span class="nav-number">3.</span> <span class="nav-text">15.2 旧版复制功能的缺陷。</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#15-3-新版复制功能的实现"><span class="nav-number">4.</span> <span class="nav-text">15.3 新版复制功能的实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#PSYNC特点"><span class="nav-number">4.1.</span> <span class="nav-text">PSYNC特点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#15-4-部分重同步的实现"><span class="nav-number">5.</span> <span class="nav-text">15.4 部分重同步的实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#15-4-1-复制偏移量"><span class="nav-number">5.1.</span> <span class="nav-text">15.4.1 复制偏移量</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#情景："><span class="nav-number">5.1.1.</span> <span class="nav-text">情景：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#问题"><span class="nav-number">5.1.2.</span> <span class="nav-text">问题</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#15-4-2-复制积压缓冲区"><span class="nav-number">5.2.</span> <span class="nav-text">15.4.2 复制积压缓冲区</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#上一小节答案："><span class="nav-number">5.2.1.</span> <span class="nav-text">上一小节答案：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#如何通过设置来有效的让redis执行部分同步操作："><span class="nav-number">5.2.2.</span> <span class="nav-text">如何通过设置来有效的让redis执行部分同步操作：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#15-4-3-服务器运行id"><span class="nav-number">5.3.</span> <span class="nav-text">15.4.3 服务器运行id</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#15-5-psync-流程"><span class="nav-number">5.4.</span> <span class="nav-text">15.5 psync 流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#15-6-复制的实现"><span class="nav-number">6.</span> <span class="nav-text">15.6 复制的实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#15-7-心跳检测"><span class="nav-number">7.</span> <span class="nav-text">15.7 心跳检测</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#心跳检测的作用"><span class="nav-number">7.1.</span> <span class="nav-text">心跳检测的作用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#15-7-1-检测主从服务器的连接状态"><span class="nav-number">7.2.</span> <span class="nav-text">15.7.1 检测主从服务器的连接状态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#15-7-2-辅助实现min-slaves选项"><span class="nav-number">7.3.</span> <span class="nav-text">15.7.2 辅助实现min-slaves选项</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#15-7-2-检测命令丢失"><span class="nav-number">7.4.</span> <span class="nav-text">15.7.2 检测命令丢失</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#sentinel-redis哨兵机制"><span class="nav-number">8.</span> <span class="nav-text">sentinel redis哨兵机制</span></a></li></ol></div>
             
 
           </div>
