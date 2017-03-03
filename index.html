@@ -299,6 +299,318 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="http://pangyq.cn/2017/03/03/redis设计与实现————单机数据库/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="YueQiang Pang">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/uploads/avatar.jpg">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="庞跃强的个人博客">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="庞跃强的个人博客" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/2017/03/03/redis设计与实现————单机数据库/" itemprop="url">
+                  redis设计与实现————单机数据库
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-03-03T10:43:16+08:00">
+                2017-03-03
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+              <span class="post-meta-divider">|</span>
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/redis/" itemprop="url" rel="index">
+                    <span itemprop="name">redis</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <a href="/2017/03/03/redis设计与实现————单机数据库/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2017/03/03/redis设计与实现————单机数据库/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="服务器中的数据库"><a href="#服务器中的数据库" class="headerlink" title="服务器中的数据库"></a>服务器中的数据库</h2><p>redis服务器将所有的数据库都保存在服务器状态，redis.h/rediserver结构的db数组里面，db数组额每一项都是一个redis.h/redisDb结构，每一个redisDb结构代表一个数据库。在初<br>始化服务器的时候，程序会根据服务器状态的dbnum属性，来决定应该创建多少个数据库。</p>
+<pre><code>struct redisServer{
+//服务器数据库的数量
+    int dbNum;
+//一个数组，保存着数据库中所有的数据库
+ redisDb *db;
+};
+</code></pre><p>dbNum属性的值由于服务器配置的<strong>database</strong>选项决定，默认情况下，该选项的值是16，redis会默认创建16个数据库。</p>
+<h2 id="切换数据库"><a href="#切换数据库" class="headerlink" title="切换数据库"></a>切换数据库</h2><p>每个redis客户端都有自己的目标数据库，每当客户端执行数据库读写命令时，目标数据库都会成为这些命令的操作对象。客户端通过select <code>&lt;</code>index<code>&gt;</code> 来切换数据库。</p>
+<h2 id="数据库键空间"><a href="#数据库键空间" class="headerlink" title="数据库键空间"></a>数据库键空间</h2><p>redis 是一个键值对数据库服务器，服务器中的每一个数据库都是有一个redis.h/redisDb结构表示，其中redis结构的dict字典保存了数据库中的所有键值对，我们将这个字典称为键空间。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">typedef struct redisDb &#123;</div><div class="line">	//数据库键空间，保存数据库所有的键值对</div><div class="line">	dict *dict;</div><div class="line">&#125;redisDb;</div></pre></td></tr></table></figure>
+<blockquote>
+<ul>
+<li>键空间的键也就是数据库的键，每个键都是一个字符串对象。</li>
+<li>键空间的值，也就是数据库的值，每个值可以是一个字符串对象，列表对象，哈希表对象，集合对象，和有序集合对象中的任意一种redis对象。</li>
+<li>因为数据库的键空间就是一个字典，所以所有针对数据库的操作，增删改查，都是通过对键空间字典的操作来实现的。比如，set ,rpush，hset,del,get lrange,特殊的flushdb,randomkey,dbsize,exists,rename,keys等。</li>
+</ul>
+</blockquote>
+<h4 id="主要介绍一下，读写键空间时候，redis做的一些维护操作："><a href="#主要介绍一下，读写键空间时候，redis做的一些维护操作：" class="headerlink" title="主要介绍一下，读写键空间时候，redis做的一些维护操作："></a>主要介绍一下，读写键空间时候，redis做的一些维护操作：</h4><ul>
+<li>在读取一个键时，（读写操作都要对键进行读操作），服务器会根据键是否存在，来更新服务器的键空间命中次数和和键空间miss次数，这两个值可以在命令<strong>info stats</strong>的<strong>keyspace_hits</strong>属性和<strong>keyspace_misses</strong> 属性中查看。</li>
+<li>在读取一个键后，redis 会更新键的LRU(最后一次使用)时间，这个值可以用于查看一个键的闲置时间，可以用 <strong>object idletime <code>&lt;</code>key<code>&gt;</code></strong> 命令查看键的闲置时间。</li>
+<li>如果服务器在读取一个键发现键已经过期，那么服务器会先删除这个键，然后才执行余下的操作。</li>
+<li>如果有客户端使用watch命令监视了某个键，那么服务器会在这个键修改后，把这个键标记为脏（dirty）,从而让事务注意到这个键已经被修改。</li>
+<li>服务器每次修改一个键后，都会对脏键计数器的值增1，这个计数器会触发服务器的持久化和复制操作。</li>
+</ul>
+<h2 id="设置键的生存时间和过期时间"><a href="#设置键的生存时间和过期时间" class="headerlink" title="设置键的生存时间和过期时间"></a>设置键的生存时间和过期时间</h2><p>redis 有四个命令可以设置键的生存时间（键可以存在多久）和过期时间（键什么时候删除）</p>
+<ul>
+<li>EXPIRE <code>&lt;</code>key<code>&gt;</code> <code>&lt;</code>ttl<code>&gt;</code> 将键的生存时间设置为ttl秒</li>
+<li>PEXPIRE <code>&lt;</code>key<code>&gt;</code> <code>&lt;</code>ttl<code>&gt;</code> 将键的生存时间设置为ttl毫秒</li>
+<li>EXPIREAT <code>&lt;</code>key<code>&gt;</code> <code>&lt;</code>timestamp<code>&gt;</code> 将键的过期时间设置为timestamp秒时间戳</li>
+<li>PEXPIREAT <code>&lt;</code>key<code>&gt;</code> <code>&lt;</code>timestamp <code>&gt;</code> 将键的过期时间设置为timestamp毫秒时间戳</li>
+</ul>
+<p>虽然有四个命令，其中前三个都是使用PEXPIREAT来实现的。<br>通过<strong>expire</strong>命令和<strong>pexpire</strong>命令，客户端可以以秒和毫秒精度为数据库中的某个键设置生存时间（Time To Live TTL）， 在经过指定的生存时间后，服务器就会自动删除生存时间为0的键。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">redis&gt; set msg nihao</div><div class="line">(integer) 1</div><div class="line">redis&gt; expire msg 5</div><div class="line">(integer) 1</div></pre></td></tr></table></figure>
+<p>与<strong>expire</strong>命令和<strong>pexpire</strong>命令类似，客户端可以通过<strong>expireat</strong> 和<strong>pexpireat</strong> 命令以秒和毫秒精度给数据库里某个键设置过期时间。<br>过期时间是一个unix时间戳；</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">expireat key 1377257300</div></pre></td></tr></table></figure>
+<h3 id="问题："><a href="#问题：" class="headerlink" title="问题："></a>问题：</h3><ul>
+<li>数据库如何保存键的生存时间和过期时间。</li>
+<li>服务器如何自动删除那些带有生存时间和过期时间的键。</li>
+</ul>
+<h2 id="保存过期时间"><a href="#保存过期时间" class="headerlink" title="保存过期时间"></a>保存过期时间</h2><p>redisDb结构的expires字典保存了数据库中所有键的过期时间，称为过期字典。</p>
+<p>过期字典的键是一个指针，这个指针指向键空间的某个键对象。<br>过期字典的值是一个 long long 类型的整数，这个整数保存了键所指向的数据库的键的过期时间 一个毫秒精度的Unix时间戳。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">typedef struct redisDb&#123;</div><div class="line">// 过期字典，保存着键的过期时间</div><div class="line">dict *expires;</div><div class="line">&#125;redisDb;</div></pre></td></tr></table></figure>
+<p><img src="/uploads/expires.png" alt="过期字典数据库存储实例"></p>
+<p>有设置键的过期时间，就有相应的移除命令，<strong>PERSIST</strong> <code>&lt;</code>key<code>&gt;</code> 移除键的过期时间，就是将过期字典中该键移除。</p>
+<p>如果忘记了一个键还有多少时间过期，redis也有相应的命令，<strong>TTL</strong> 和 <strong>PTTL</strong> 分别返回秒和毫秒单位的时间。<br>如果数据库中不存在这个键，将返回 -2 ，如果数据库中这个键的并没有设置过期时间，将返回-1 ，否则返回 （<strong>过期时间</strong> -  <strong>当前时间</strong>）</p>
+<h5 id="过期键的判定"><a href="#过期键的判定" class="headerlink" title="过期键的判定"></a>过期键的判定</h5><blockquote>
+<p>其实就是扫描，过期字典中的键，利用当前时间，与过期时间进行比较。</p>
+</blockquote>
+<h2 id="过期键的删除策略"><a href="#过期键的删除策略" class="headerlink" title="过期键的删除策略"></a>过期键的删除策略</h2><ul>
+<li>定时删除：在设置键的过期时间的同时，创建一个定时器，让定时器在键的过期时间来临时，立即执行对键的删除操作。</li>
+<li>惰性删除：放任键过期不管，每次读取键时，都检查取得的键是否过期，如果过期，就删除。</li>
+<li>定期删除：每隔一段时间，就对数据库进行一次检查，删除里面的过期键。至于删除多少过期键，以及要检查多少个数据库，择则有算法决定。</li>
+</ul>
+<p>第一种和第三种为主动删除策略，第二种为被动删除策略。</p>
+<h4 id="优缺点："><a href="#优缺点：" class="headerlink" title="优缺点："></a>优缺点：</h4><p>定时删除： </p>
+<blockquote>
+<ul>
+<li>优点：对内存友好，可以保证冷数据及时的呗清除，释放过期键占用的内存。</li>
+<li>缺点：对cpu不友好，作为一个轻量，高速要求的内存数据库来说，如果过期键比较多的情况下，删除过期键这一行为，可能占用大量的cpu时间，将会大大影响正常的业务请求的响应时间和吞吐量。是redis所不能忍受的。而且，创建一个定时器需要用到redis服务器中的时间事件，时间事件的实现方式，是无序列表，查找的复杂度为O(N)，并不能高校的处理大量的过期键创建的时间事件。</li>
+</ul>
+</blockquote>
+<p>惰性删除：</p>
+<blockquote>
+<ul>
+<li>优点:对cpu友好，延迟了那些无关键的删除操作，只针对当前处理的键，进行删除操作。<ul>
+<li>缺点：对内存不友好,如果数据库中存在大量的过期键，而且以后可能不会在被访问到，这些键就会长久的占用内存，不会释放，（除非手动执行FLUSHDB）,可以被看做内存泄露。比如跟时间点有关的 日志（log） 在某个时间点后，访问大大减少，甚至不在访问，就会造成数据库大量数居的积压，内存得不到释放。</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>定期删除：</p>
+<blockquote>
+<ul>
+<li>定期删除是对上述两种方式的一种整合；定期删除，既不会让cpu长时间处于无关业务的事件上，同时又能定期的删除过期键，释放内存。</li>
+<li>但是如果定期删除执行的太频繁，执行的时间太长，就会退化成，定时删除。如果执行的次数太少，执行时间太短，又会和惰性删除策略类似，造成内存脏数据的积压。所以服务器必须根据业务数据，过期键的增长情况，合理的设置删除的次数和执行频率。</li>
+</ul>
+</blockquote>
+<h2 id="redis的过期键删除策略："><a href="#redis的过期键删除策略：" class="headerlink" title="redis的过期键删除策略："></a>redis的过期键删除策略：</h2><p>redis服务器使用惰性删除策略，和定期删除策略两种删除策略，服务器何以很好的在合理利用cpu,避免浪费内存空间之间取得平衡。实现：</p>
+<ul>
+<li>惰性删除策略：由db.c/expireIfNeeded函数实现，所有读写数据库键的命令都会在执行之前，调用expireIfNeeded函数对输入键进行检查。</li>
+</ul>
+<p><img src="/uploads/expireCheck.png" alt="惰性删除策略流程"></p>
+<ul>
+<li>定期删除策略：<br>过期键的定期删除策略有redis.c/activeExpireCycle 函数实现，每当redis周期性的操作 redis.c/serverCron 函数执行时，activeExpireCycle 函数就会被调用，他在规定的时间内，分多次遍历服务器中的各个数据库，从数据库中的expires字典中，随机检查一部分过期键的过期时间，并删除其中的过期键。<br>大致就是，用一个全局变量当做游标，记录该次检查遍历的数据库的index， 从其中随机抽出固定部分键，检查是否过期，及过期键所占比例，规定一个比例阀值，直到随机抽查的键中，过期键占比低于阀值，便继续下一个数据库，同时更新游标值，以便下次改函数执行时，从游标记录的数据库开始执行，当执行到最后一个数据库时，所有的数据库遍历一遍，游标清0，下次函数执行，又从新开始遍历。</li>
+</ul>
+<p><a href="http://m.blog.csdn.net/article/details?id=52803151" target="_blank" rel="external">csdn 博客过期删除策略</a></p>
+<h2 id="AOF-RDB-和复制功能对过期键的处理"><a href="#AOF-RDB-和复制功能对过期键的处理" class="headerlink" title="AOF RDB 和复制功能对过期键的处理"></a>AOF RDB 和复制功能对过期键的处理</h2><p>先抛出两个问题：</p>
+<ul>
+<li>如果数据库进行持久化，数据库中的过期键，要不要持久化。</li>
+<li>服务器重启时，载入持久化文件进入内存时，那些已经过期的键该如何处理，在主从复制模式下，又会怎么样。</li>
+</ul>
+<h4 id="生成RDB文件"><a href="#生成RDB文件" class="headerlink" title="生成RDB文件"></a>生成RDB文件</h4><p>在执行<strong>SAVE</strong> 命令，和 <strong>BGSAVE</strong>命令创建一个新的RDB文件时，程序会对数据库中所有的键进行检查，已经过期的键不会被保存到新创建的RDB文件中。因此数据库中的过期键，不会对生成新的RBD文件造成影响。</p>
+<h4 id="载入RBD文件"><a href="#载入RBD文件" class="headerlink" title="载入RBD文件"></a>载入RBD文件</h4><p>在启动服务器时，如果服务器开启了RDB功能，那么服务器将对RDB文件进行载入：</p>
+<blockquote>
+<ul>
+<li>如果服务器以主服务器模式运行，在载入文件时，程序会对文件中保存的键进行检查，未过期的键会被载入内存，过期键，会被忽略。所以RDB中过期的键对主服务器不会造成影响。</li>
+<li>如果服务器以从服务器的模式运行，在载入文件时，文件中所保存的键，无论是否过期，都会载入到数据库。因为数据库在进行主从同步数据时，从数据库的数据都会被清除，以主服务器数据为准。</li>
+</ul>
+</blockquote>
+<h4 id="AOF文件写入"><a href="#AOF文件写入" class="headerlink" title="AOF文件写入"></a>AOF文件写入</h4><blockquote>
+<ul>
+<li>当服务器以AOF持久化模式运行时，如果数据库中的某个键已经过期，但他还没有被惰性删除，或者定期删除，那么AOF不会因为这个过期键而产生影响。</li>
+<li>当过期键被惰性删除，或者定期删除，程序会向AOF文件追一条DEl命令，来显示的标记该键已经被删除。</li>
+<li>比如客户端执行 get msg,而msg键此时已经过期，redis会先从数据库删除该键，向AOF 文件追加一条删除命令，向客户端返回空。</li>
+</ul>
+</blockquote>
+<h4 id="AOF-文件重写"><a href="#AOF-文件重写" class="headerlink" title="AOF 文件重写"></a>AOF 文件重写</h4><blockquote>
+<p>和生成AOF文件类似，重写之前，会先检查数据库中的键，已过期的键不会重写到AOF 文件中去。</p>
+</blockquote>
+<h4 id="复制"><a href="#复制" class="headerlink" title="复制"></a>复制</h4><p>当数据库运行在复制模式下，从服务器的过期键删除动作由主服务器控制。</p>
+<ul>
+<li>当主服务器，删除了一个过期键，回向所有他的小弟们，发送一个DEl命令，告知从服务器，删除了这个过期键。</li>
+<li>从服务器在执行客户端的读操作时，即使碰到过期键，也不会执行过期键的删除操作，而是继续像没过期的键一样进行处理。</li>
+</ul>
+<ol>
+<li>通过主服务器来控制从服务器统一的删除过期键，可以保证主从服务器的数据一致性，也正是因为这个原因，当一个过期键存在主服务器时，这个过期键的复制品，也一样存在从服务器，从而保证主从服务器的数据的一致性。</li>
+<li>如果这时有客户端向从服务器发送GET命令，那么从服务器同样会先执行键的检查，将发现message键已经过期，但是从服务器不会执行过期键的删除策略，而是继续将键的值返回给客户端。</li>
+<li>假设有客户端向主服务器发送GET命令，主服务器先检查键是否过期，发现过期，就会执行过期删除策略，向客户端返回空，同时向从服务器发送DEL命令。</li>
+<li>从服务器收到主服务器发来的Del命令，也会进行删除操作，主从服务器又会保持一致。</li>
+</ol>
+<h2 id="RDB持久化"><a href="#RDB持久化" class="headerlink" title="RDB持久化"></a>RDB持久化</h2><p>redis 作为一个内存数据库，一旦redis进程意外退出，断电，关机，内存数据就会清空，所以必须有一个数据备份的机制，启动服务的时候能够把数据load进内存，运行时能够定期的把内存某一时期的快照进行持久化存储。redis通过 RDB 和AOF 两种方式实现。可以手动执行，也可以配置文件定期执行。</p>
+<p>RDB 文件，保存了某个时间点，redis服务器中整个数据库的状态，数据。 redis通过SAVE 和 BGSAVE 命令来手动的触发RDB持久化。</p>
+<h4 id="问题：SAVE-和-BGSAVE的区别"><a href="#问题：SAVE-和-BGSAVE的区别" class="headerlink" title="问题：SAVE 和 BGSAVE的区别?"></a>问题：SAVE 和 BGSAVE的区别?</h4><ul>
+<li>SAVE 命令会阻塞服务器进程，知道RDB文件创建完毕为止，在服务器进程阻塞期间，服务器不能处理任何命令请求；</li>
+<li><p>BGSAVE 不会阻塞服务器进程，BGSAVE会派生出一个子进程。然后由子进程负责创建RDB文件，服务器进程继续处理，命令请求。<br>redis服务器在启动时如果检测到RDB 文件，会自动的载入RDB文件。</p>
+</li>
+<li><p>但是：如果服务器同时开启了AOF 和 RDB 功能,由于AOF的更新频率比RDB的更新频率高，服务器启动时，会优先检测AOF是否开启，如果开启，默认使用AOF 文件还原数据库状态。</p>
+</li>
+</ul>
+<h4 id="BGSAVE-执行期间服务器的状态："><a href="#BGSAVE-执行期间服务器的状态：" class="headerlink" title="BGSAVE 执行期间服务器的状态："></a>BGSAVE 执行期间服务器的状态：</h4><p>BGSAVE 执行期间父进程继续处理服务器的请求，子进程处理RDB持久化，如果这个时候，客户端在发送 SAVE ,BGSAVE ,BGREWRITEAOF 命令会怎么样。</p>
+<ul>
+<li>SAVE ，直接拒绝，因为SAVE 命令由父进程执行，RDB 持久化 会调用同一个函数，rdbSave ，防止两个进程产生竟态条件。</li>
+<li>BGREWRITEAOF 和 BGSAVE 不能同时执行。BGSAVE 正在执行，BGREWRITEAOF 会延迟到BGSAVE执行完毕才执行。BGREWRITEAOF执行期间，BGSAVE 会被直接拒绝。因为两个命令都会派生一个子进程进行持久化，并且两个子进程都会进行大量的磁盘写入操作，会对服务器的性能造成影响。</li>
+</ul>
+<h2 id="自动间隔保存"><a href="#自动间隔保存" class="headerlink" title="自动间隔保存"></a>自动间隔保存</h2><p>因为BGSAVE 可以在不阻塞服务器的情况下执行，所以redis允许用户可以设置服务器配置的save选项，让服务器每间隔一段时间自动执行一次BGSAVE；</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">save 900 1       //每900秒内，数据库至少进行过1次修改</div><div class="line">save 300 10		//每300秒内，数据库至少进行过10次修改</div><div class="line">save 60 10000		//每60秒内，数据库至少进行过10000次修改</div></pre></td></tr></table></figure>
+<p>每当数据库启动，就会把配置文件中的参数，load进服务器状态 redisServer 结构中的saveParams中；</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">struct redisServer &#123;</div><div class="line"></div><div class="line">	// 修改计数器</div><div class="line">	long long dirty;</div><div class="line">	//记录了保存条件的数组</div><div class="line">	struct saveparam *saveparams;</div><div class="line">	</div><div class="line">	//上一次执行保存时间</div><div class="line">	time_t lastsave;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>saveparams 属性是一个数组，数组中的每一个元素都是一个 saveparam 结构，每一个saveparam 结构都把保存了一个save 选项设置的保存条件。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">struct saveparam&#123;</div><div class="line">//秒数</div><div class="line">time_t seconds;</div><div class="line">//修改次数</div><div class="line">int changes;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p><img src="/uploads/saveparam.png" alt="save 配置数据库存储状态"></p>
+<h4 id="dirty计数器-和lastsave-属性"><a href="#dirty计数器-和lastsave-属性" class="headerlink" title="dirty计数器 和lastsave 属性"></a>dirty计数器 和lastsave 属性</h4><ul>
+<li>dirty 记录距上一次成功save 后，服务器执行的修改次数；</li>
+<li>lastsave 记录上一次成功进行保存后的Unix时间戳；</li>
+</ul>
+<p>服务器的常规性维护操作，时间事件，serverCron 其中一项就是检查save设置的保存条件是否满足，就是取服务器状态中的dirty 与saveparam 中的changes进行比较。还有当前时间减去服务器状态中的lastsave 时间和saveparam 中的seconds 比较。</p>
+<h4 id="rdb文件的结构"><a href="#rdb文件的结构" class="headerlink" title="rdb文件的结构"></a>rdb文件的结构</h4><p>REDIS | db_version | databases | EOF | checkout_sum</p>
+<h2 id="AOF-持久化"><a href="#AOF-持久化" class="headerlink" title="AOF 持久化"></a>AOF 持久化</h2><h4 id="AOF持久化的实现"><a href="#AOF持久化的实现" class="headerlink" title="AOF持久化的实现"></a>AOF持久化的实现</h4><p> 与RDB持久化通过保存数据库中的键值对来记录数据库的状态不同，AOF 持久化是通过保存Redis服务器的写命令来记录数据库的状态的。</p>
+<p> 客户端  ——》 发送写命令 ——》 服务器 –&gt; 保存被执行的写命令 ——》 AOF 文件</p>
+<h4 id="命令追加"><a href="#命令追加" class="headerlink" title="命令追加"></a>命令追加</h4><p>当AOF 持久化功能处于打开状态时，服务器在执行完一个写命令后，会以协议格式，将执行的命令追加到服务器状态的aof_buf 缓冲区的末尾；</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">struct redisServer &#123;</div><div class="line">	// AOF 缓冲区</div><div class="line">	sds aof_buf；</div><div class="line">&#125;；</div></pre></td></tr></table></figure>
+<h4 id="AOF-文件的写入和同步"><a href="#AOF-文件的写入和同步" class="headerlink" title="AOF 文件的写入和同步"></a>AOF 文件的写入和同步</h4><p>redis服务器进程就是一个事件循环，这个循环中的文件事件负责接收客户端的请求，以及向客户端发送命令回复，而时间事件，负责执行像 serverCron 函数这样需要定时运行的函数；</p>
+<p>服务器在执行文件事件时，可能执行一些写命令，使得一些内容被追加到服务器状态aof_buf 缓冲区，所以在服务器每次循环事件执行前，他都会调用 flushAppendOnlyFile函数，考虑是否将缓冲区的数据斜土和保存到AOF文件。</p>
+<p>flushAppendOnlyFile 函数的行为有服务器配置的appendfsync 选项的值来决定；</p>
+<ul>
+<li>always</li>
+<li>everysec</li>
+<li>no 一旦宕机，将丢失上次同步之后操作系统最后一次同步之后所有的数据</li>
+</ul>
+<p><img src="/uploads/aofsyn.png" alt="AOF 文件同步策略"></p>
+<h4 id="aof-文件的载入和还原"><a href="#aof-文件的载入和还原" class="headerlink" title="aof 文件的载入和还原"></a>aof 文件的载入和还原</h4><p>因为aof文件记录的是reids 写命令，而redis 的命令只能在客户端上下文中执行，而载入AOF 文件所使用的命令直接来源于AOF文件而不是网络连接，所以服务器创建了一个没有网络连接的伪客户端。来执行从AOF文件中分析出来的命令。</p>
+<h4 id="AOF-重写"><a href="#AOF-重写" class="headerlink" title="AOF 重写"></a>AOF 重写</h4><p>问题：为什么要重写？重写时以什么为参照物？重写的文件有什么好处？</p>
+<ul>
+<li>因为Aof 持久化是通过保存被执行的命令，来记录数据库状态的，所以随着服务器运行时间的流逝，AOF 文件中的内容会越来越多，提及越来越大，不加以控制，会对服务器的运行造成影响，而且利用Aof 的还原数据非常耗时。</li>
+<li>重写时，并不以老的AOF 文件为基准，而是重新读取数据库状态，创建一个新的AOf 文件。来替换老的AOF文件。来减少那些冗余命令所占空间。</li>
+<li>假如一个集合，每次增加操作，往里面push 一个数据，最后这个集合一共有十万条数据，那就是十万条命令，要存到AOF文件里面去。但是重写后，单条命令 SADD 命令可以一次添加 64 个元素，原来的十万条命令，重写后，缩小了64倍。</li>
+</ul>
+<h4 id="AOF-后台重写"><a href="#AOF-后台重写" class="headerlink" title="AOF 后台重写"></a>AOF 后台重写</h4><p>AOF从写程序 aof_rewrite函数会进行大量的写入操作，redis作为一个单线程程序，如果主线程来调用这个函数，势必会造成线程的长时间阻塞，这是redis所不允许的，和RDB 一样AOF重写，也会调用子线程来进行重写操作。但是有稍微区别，AOF 后台重写，并不是全程无阻塞；</p>
+<p><img src="/uploads/aofrewrite.png" alt="aof后台重写"></p>
+<p>当子线程开启后，所有客户端的写命令，都会追加到aof缓冲区和aof重写缓冲区，子线程重写完后，向父进程发送一个信号函数，父进程进入阻塞状态，并将aof重写缓冲区数据刷入新的AOF文件，原子的替换掉现有的AOF文件。</p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
   <link itemprop="mainEntityOfPage" href="http://pangyq.cn/2017/03/01/redis设计与实现之多机数据库/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -385,187 +697,6 @@
         
           
             
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="http://pangyq.cn/2017/03/01/redis设计与实现之单机数据库/">
-
-  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
-    <meta itemprop="name" content="YueQiang Pang">
-    <meta itemprop="description" content="">
-    <meta itemprop="image" content="/uploads/avatar.jpg">
-  </span>
-
-  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-    <meta itemprop="name" content="庞跃强的个人博客">
-    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
-      <img style="display:none;" itemprop="url image" alt="庞跃强的个人博客" src="">
-    </span>
-  </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2017/03/01/redis设计与实现之单机数据库/" itemprop="url">
-                  redis设计与实现之单机数据库
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-03-01T10:52:13+08:00">
-                2017-03-01
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <a href="/2017/03/01/redis设计与实现之单机数据库/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2017/03/01/redis设计与实现之单机数据库/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h2 id="9-数据库"><a href="#9-数据库" class="headerlink" title="9:数据库"></a>9:数据库</h2><ol>
-<li><a href="#9.1">服务器中的数据库</a> </li>
-<li><a href="#9.2">切换数据库</a></li>
-<li><a href="#9.3">数据库中的键空间</a></li>
-<li><a href="#9.4">设置键的生存时间或者过期时间</a> </li>
-<li><a href="#9.5">过期键的删除策略</a></li>
-<li><a href="#9.6">redis的过期键删除策略</a> </li>
-<li><a href="#9.7">AOF ,RDB 和复制功能对过期键的处理</a> </li>
-</ol>
-<h2 id="10-RDB持久化"><a href="#10-RDB持久化" class="headerlink" title="10: RDB持久化"></a>10: RDB持久化</h2><ol>
-<li>RDB文件的创建与写入</li>
-<li>自动间隔性保存</li>
-<li>RDB文件的结构</li>
-</ol>
-<h2 id="11-AOF持久化"><a href="#11-AOF持久化" class="headerlink" title="11: AOF持久化"></a>11: AOF持久化</h2><ol>
-<li>AOF持久化的实现</li>
-<li>AOF文件的载入与数据还原</li>
-<li>AOF重写</li>
-</ol>
-<h3 id="数据库"><a href="#数据库" class="headerlink" title="数据库"></a>数据库</h3><h4 id="服务器中的数据库"><a href="#服务器中的数据库" class="headerlink" title="服务器中的数据库 "></a>服务器中的数据库 <span id="9.1"></span></h4><p>redis服务器将所有的数据库都保存在服务器状态，redis.h/rediserver结构的db数组里面，db数组额每一项都是一个redis.h/redisDb结构，每一个redisDb结构代表一个数据库。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">struct redisServer&#123;</div><div class="line">//......</div><div class="line">....</div><div class="line">//一个数组，保存着数据库中所有的数据库</div><div class="line"> redisDb *db;</div><div class="line">&#125;;</div><div class="line">``` </div><div class="line">在初始化服务器的时候，程序会根据服务器状态的dbnum属性，来决定应该创建多少个数据库。</div></pre></td></tr></table></figure>
-<p>struct redisServer{<br>    // …</p>
-<pre><code>//服务器数据库的数量
-int dbNum;
-// ...
-</code></pre><p>}<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">dbNum属性的值由于服务器配置的database选项决定，默认情况下，该选项的值是16，redis会默认创建16个数据库。</div><div class="line"></div><div class="line">#### 切换数据库&lt;span id = &quot;9.2&quot;&gt;&lt;/span&gt;</div><div class="line">每个redis客户端都有自己的目标数据库，每当客户端执行数据库读写命令时，目标数据库都会成为这些命令的操作对象。</div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line">#### 数据库键空间 &lt;span id = &quot;9.3&quot;&gt;&lt;/span&gt;</div><div class="line"></div><div class="line">redis 是一个键值对数据库服务器，服务器中的每一个数据库都是有一个redis.h/redisDb结构表示，其中redis结构的dict字典保存了数据库中的所有键值对，我们将这个字典称为键空间。</div></pre></td></tr></table></figure></p>
-<p>typedef struct redisDb {<br>    //…<br>    //数据库键空间，保存数据库所有的键值对<br>    dict *dict;<br>    // …..</p>
-<p>}redisDb;<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line">键空间的键也就是数据库的键，每个键都是一个字符串对象。</div><div class="line">键空间的值，也就是数据库的值，每个值可以是一个字符串对象，列表对象，哈希表对象，集合对象，和有序集合对象中的任意一种redis对象。</div><div class="line">因为数据库的键空间就是一个字典，所以所有针对数据库的操作，增删改查，都是通过对键空间字典的操作来实现的。比如，set ,rpush，hset,del,get lrange,特殊的flushdb,randomkey,dbsize,exists,rename,keys等。</div><div class="line"></div><div class="line">主要介绍一下，读写键空间时候，redis做的一些维护操作：</div><div class="line"></div><div class="line">* 在读取一个键时，（读写操作都要对键进行读操作），服务器会根据键是否存在，来更新服务器的键空间命中次数和和键空间miss次数，这两个值可以在命令**info stats**的**keyspace_hits**属性和**keyspace_misses** 属性中查看。</div><div class="line">* 在读取一个键后，redis 会更新键的LRU(最后一次使用)时间，这个值可以用于查看一个键的闲置时间，可以用 **object idletime `&lt;`key`&gt;`** 命令查看键的闲置时间。</div><div class="line">* 如果服务器在读取一个键发现键已经过期，那么服务器会先删除这个键，然后才执行余下的操作。</div><div class="line">* 如果有客户端使用watch命令监视了某个键，那么服务器会在这个键修改后，把这个键标记为脏（dirty）,从而让事务注意到这个键已经被修改。</div><div class="line">* 服务器每次修改一个键后，都会对脏键计数器的值增1，这个计数器会触发服务器的持久化和复制操作。</div><div class="line"></div><div class="line"></div><div class="line">#### 设置键的生存时间和过期时间 &lt;span id = &quot;9.4&quot;&gt;&lt;/span&gt;</div><div class="line">redis 有四个命令可以设置键的生存时间（键可以存在多久）和过期时间（键什么时候删除）</div><div class="line"></div><div class="line">* EXPIRE `&lt;`key`&gt;` `&lt;`ttl`&gt;` 将键的生存时间设置为ttl秒</div><div class="line">* PEXPIRE `&lt;`key`&gt;` `&lt;`ttl`&gt;` 将键的生存时间设置为ttl毫秒</div><div class="line">* EXPIREAT `&lt;`key`&gt;` `&lt;`timestamp`&gt;` 将键的过期时间设置为timestamp秒时间戳</div><div class="line">* PEXPIREAT `&lt;`key`&gt;` `&lt;`timestamp `&gt;` 将键的过期时间设置为timestamp毫秒时间戳</div><div class="line"></div><div class="line">虽然有四个命令，其中前三个都是使用PEXPIREAT来实现的。</div><div class="line">通过**expire**命令和**pexpire**命令，客户端可以以秒和毫秒精度为数据库中的某个键设置生存时间（Time To Live TTL）， 在经过指定的生存时间后，服务器就会自动删除生存时间为0的键。</div></pre></td></tr></table></figure></p>
-<p>redis&gt; set msg nihao<br>(integer) 1<br>redis&gt; expire msg 5<br>(integer) 1<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">与**expire**命令和**pexpire**命令类似，客户端可以通过**expireat** 和**pexpireat** 命令以秒和毫秒精度给数据库里某个键设置过期时间。</div><div class="line">过期时间是一个unix时间戳；</div></pre></td></tr></table></figure></p>
-<p>expireat key 1377257300<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">问题：</div><div class="line"></div><div class="line">* 数据库如何保存键的生存时间和过期时间。</div><div class="line">* 服务器如何自动删除那些带有生存时间和过期时间的键。</div><div class="line"></div><div class="line">##### 保存过期时间</div><div class="line"></div><div class="line">redisDb结构的expires字典保存了数据库中所有键的过期时间，称为过期字典。</div><div class="line"></div><div class="line">过期字典的键是一个指针，这个指针指向键空间的某个键对象。</div><div class="line">过期字典的值是一个 long long 类型的整数，这个整数保存了键所指向的数据库的键的过期时间 一个毫秒精度的Unix时间戳。</div></pre></td></tr></table></figure></p>
-<p>typedef struct redisDb{<br>// …<br>// 过期字典，保存着键的过期时间<br>dict *expires;<br>// ….<br>}redisDb;<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">![过期字典数据库存储实例](/uploads/expires.png)</div><div class="line">有设置键的过期时间，就有相应的移除命令，**PERSIST** `&lt;`key`&gt;` 移除键的过期时间，就是将过期字典中该键移除。</div><div class="line"></div><div class="line">如果忘记了一个键还有多行时间过期，redis也有相应的命令，**TTL** 和 **PTTL** 分别返回秒和毫秒单位的时间。</div><div class="line">如果数据库中不存在这个键，将返回 -2 ，如果数据库中这个键的并没有设置过期时间，将返回-1 ，否则返回 （**过期时间** -  **当前时间**）</div><div class="line">##### 过期键的判定</div><div class="line">&gt; 其实就是扫描，过期字典中的键，利用当前时间，与过期时间进行比较。</div><div class="line"></div><div class="line">#### 过期键的删除策略 &lt;span id = &quot;9.5&quot;&gt;&lt;/span&gt;</div><div class="line">* 定时删除：在设置键的过期时间的同时，创建一个定时器，让定时器在键的过期时间来临时，立即执行对键的删除操作。</div><div class="line">* 惰性删除：放任键过期不管，每次读取键时，都检查取得的键是否过期，如果过期，就删除。</div><div class="line">* 定期删除：每隔一段时间，就对数据库进行一次检查，删除里面的过期键。至于删除多少过期键，以及要检查多少个数据库，择则有算法决定。</div><div class="line"></div><div class="line">第一种和第三种为主动删除策略，第二种为被动删除策略。</div><div class="line"></div><div class="line">######优缺点：</div><div class="line">定时删除： </div><div class="line">&gt;优点：对内存友好，可以保证冷数据及时的呗清除，释放过期键占用的内存。</div><div class="line">&gt;缺点：对cpu不友好，作为一个轻量，高速要求的内存数据库来说，如果过期键比较多的情况下，删除过期键这一行为，可能占用大量的cpu时间，将会大大影响正常的业务请求的响应时间和吞吐量。是redis所不能忍受的。而且，创建一个定时器需要用到redis服务器中的时间事件，时间事件的实现方式，是无序列表，查找的复杂度为O(N)，并不能高校的处理大量的过期键创建的时间事件。</div><div class="line"></div><div class="line">惰性删除：</div><div class="line">&gt; 优点:对cpu友好，延迟了那些无关键的删除操作，只针对当前处理的键，进行删除操作。</div><div class="line">&gt; 缺点：对内存不友好,如果数据库中存在大量的过期键，而且以后可能不会在被访问到，这些键就会长久的占用内存，不会释放，（除非手动执行FLUSHDB）,可以被看做内存泄露。比如跟时间点有关的 日志（log） 在某个时间点后，访问大大减少，甚至不在访问，就会造成数据库大量数居的积压，内存得不到释放。</div><div class="line"></div><div class="line">定期删除：</div><div class="line">&gt; 定期删除是对上述两种方式的一种整合；定期删除，既不会让cpu长时间处于无关业务的事件上，同时又能定期的删除过期键，释放内存。</div><div class="line">&gt; 但是如果定期删除执行的太频繁，执行的时间太长，就会退化成，定时删除。如果执行的次数太少，执行时间太短，又会和惰性删除策略类似，造成内存脏数据的积压。所以服务器必须根据业务数据，过期键的增长情况，合理的设置删除的次数和执行频率。</div><div class="line"></div><div class="line">#### redis的过期键删除策略：&lt;span id = &quot;9.6&quot;&gt;&lt;/span&gt;</div><div class="line">redis服务器使用惰性删除策略，和定期删除策略两种删除策略，服务器何以很好的在合理利用cpu,避免浪费内存空间之间取得平衡。</div><div class="line">实现：</div><div class="line">惰性删除策略：由db.c/expireIfNeeded函数实现，所有读写数据库键的命令都会在执行之前，调用expireIfNeeded函数对输入键进行检查。</div><div class="line">![惰性删除策略流程](/uploads/expireCheck.png)</div><div class="line"></div><div class="line">定期删除策略：</div><div class="line">过期键的定期删除策略有redis.c/activeExpireCycle 函数实现，每当redis周期性的操作 redis.c/serverCron 函数执行时，activeExpireCycle 函数就会被调用，他在规定的时间内，分多次遍历服务器中的各个数据库，从数据库中的expires字典中，随机检查一部分过期键的过期时间，并删除其中的过期键。</div><div class="line">大致就是，用一个全局变量当做游标，记录该次检查遍历的数据库的index， 从其中随机抽出固定部分键，检查是否过期，及过期键所占比例，规定一个比例阀值，直到随机抽查的键中，过期键占比低于阀值，便继续下一个数据库，同时更新游标值，以便下次改函数执行时，从游标记录的数据库开始执行，当执行到最后一个数据库时，所有的数据库遍历一遍，游标清0，下次函数执行，又从新开始遍历。</div><div class="line"></div><div class="line">[csdn 博客过期删除策略](http://m.blog.csdn.net/article/details?id=52803151)</div><div class="line"></div><div class="line">#### AOF RDB 和复制功能对过期键的处理 &lt;span id = &quot;9.7&quot;&gt;&lt;/span&gt;</div><div class="line">先抛出两个问题：</div><div class="line"></div><div class="line">* 如果数据库进行持久化，数据库中的过期键，要不要持久化。</div><div class="line">* 服务器重启时，载入持久化文件进入内存时，那些已经过期的键该如何处理，在主从复制模式下，又会怎么样。</div><div class="line"></div><div class="line">##### 生成RDB文件</div><div class="line">在执行**SAVE** 命令，和 **BGSAVE**命令创建一个新的RDB文件时，程序会对数据库中所有的键进行检查，已经过期的键不会被保存到新创建的RDB文件中。因此数据库中的过期键，不会对生成新的RBD文件造成影响。</div><div class="line"></div><div class="line">##### 载入RBD文件</div><div class="line">再启动服务器时，如果服务器开启了RDB功能，那么服务器将对RDB文件进行载入：</div><div class="line">&gt; 如果服务器以主服务器模式运行，在载入文件时，程序会对文件中保存的键进行检查，未过期的键会被载入内存，过期键，会被忽略。所以RDB中过期的键对主服务器不会造成影响。</div><div class="line">&gt; 如果服务器以从服务器的模式运行，在载入文件时，文件中所保存的键，无论是否过期，都会载入到数据库。因为数据库在进行主从同步数据时，从数据库的数据都会被清除，以主服务器数据为准。</div><div class="line"></div><div class="line">##### AOF文件写入</div><div class="line">当服务器以AOF持久化模式运行时，如果数据库中的某个键已经过期，但他还没有被惰性删除，或者定期删除，那么AOF不会因为这个过期键而产生影响。</div><div class="line">当过期键被惰性删除，或者定期删除，程序会向AOF文件追一条DEl命令，来显示的标记该键已经被删除。</div><div class="line">比如客户端执行 get msg,而msg键此时已经过期，redis会先从数据库删除该键，向AOF 文件追加一条删除命令，向客户端返回空。</div><div class="line"></div><div class="line">##### AOF 文件重写</div><div class="line">和生成AOF文件类似，重写之前，会先检查数据库中的键，已过期的键不会重写到AOF 文件中去。</div><div class="line"></div><div class="line"></div><div class="line">##### 复制</div><div class="line">当数据库运行在复制模式下，从服务器的过期键删除动作由主服务器控制。</div><div class="line"></div><div class="line">* 当主服务器，删除了一个过期键，回向所有他的小弟们，发送一个DEl命令，告知从服务器，删除了这个过期键。</div><div class="line">* 从服务器在执行客户端的读操作时，即使碰到过期键，也不会执行过期键的删除操作，而是继续像没过期的键一样进行处理。</div><div class="line"></div><div class="line">1. 通过主服务器来控制从服务器统一的删除过期键，可以保证主从服务器的数据一致性，也正是因为这个原因，当一个过期键存在主服务器时，这个过期键的复制品，也一样存在从服务器，从而保证主从服务器的数据的一致性。</div><div class="line">2. 如果这时有客户端向从服务器发送GET命令，那么从服务器同样会先执行键的检查，将发现message键已经过期，但是从服务器不会执行过期键的删除策略，而是继续将键的值返回给客户端。</div><div class="line">3. 假设有客户端向主服务器发送GET命令，主服务器先检查键是否过期，发现过期，就会执行过期删除策略，向客户端返回空，同时向从服务器发送DEL命令。</div><div class="line">4. 从服务器收到主服务器发来的Del命令，也会进行删除操作，主从服务器又会保持一致。</div><div class="line"></div><div class="line">### RDB持久化</div><div class="line">redis 作为一个内存数据库，一旦redis进程意外退出，断电，关机，内存数据就会清空，所以必须有一个数据备份的机制，启动服务的时候能够把数据load进内存，运行时能够定期的把内存某一时期的快照进行持久化存储。redis通过 RDB 和AOF 两种方式实现。可以手动执行，也可以配置文件定期执行。</div><div class="line"></div><div class="line">RDB 文件，保存了某个时间点，redis服务器中整个数据库的状态，数据。 redis通过SAVE 和 BGSAVE 命令来手动的触发RDB持久化。</div><div class="line"></div><div class="line">问题：</div><div class="line">SAVE 和 BGSAVE的区别；</div><div class="line"></div><div class="line">* SAVE 命令会阻塞服务器进程，知道RDB文件创建完毕为止，在服务器进程阻塞期间，服务器不能处理任何命令请求；</div><div class="line">* BGSAVE 不会阻塞服务器进程，BGSAVE会派生出一个子进程。然后由子进程负责创建RDB文件，服务器进程继续处理，命令请求。</div><div class="line">redis服务器在启动时如果检测到RDB 文件，会自动的载入RDB文件。</div><div class="line"></div><div class="line">&gt; 但是：如果服务器同时开启了AOF 和 RDB 功能,由于AOF的更新频率比RDB的更新频率高，服务器启动时，会优先检测AOF是否开启，如果开启，默认使用AOF 文件还原数据库状态。</div><div class="line"></div><div class="line">BGSAVE 执行期间服务器的状态：</div><div class="line"></div><div class="line">BGSAVE 执行期间父进程继续处理服务器的请求，子进程处理RDB持久化，如果这个时候，客户端在发送 SAVE ,BGSAVE ,BGREWRITEAOF 命令会怎么样。</div><div class="line"></div><div class="line">* SAVE ，直接拒绝，因为SAVE 命令由父进程执行，RDB 持久化 会调用同一个函数，rdbSave ，防止两个进程产生竟态条件。</div><div class="line">* BGREWRITEAOF 和 BGSAVE 不能同时执行。BGSAVE 正在执行，BGREWRITEAOF 会延迟到BGSAVE执行完毕才执行。BGREWRITEAOF执行期间，BGSAVE 会被直接拒绝。因为两个命令都会派生一个子进程进行持久化，并且两个子进程都会进行大量的磁盘写入操作，会对服务器的性能造成影响。</div><div class="line"></div><div class="line"></div><div class="line">#### 自动间隔保存</div><div class="line"></div><div class="line">因为BGSAVE 可以在不阻塞服务器的情况下执行，所以redis允许用户可以设置服务器配置的save选项，让服务器每间隔一段时间自动执行一次BGSAVE；</div></pre></td></tr></table></figure></p>
-<p>save 900 1       //每900秒内，数据库至少进行过1次修改<br>save 300 10        //每300秒内，数据库至少进行过10次修改<br>save 60 10000        //每60秒内，数据库至少进行过10000次修改<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">每当数据库启动，就会把配置文件中的参数，load进服务器状态 redisServer 结构中的saveParams中；</div></pre></td></tr></table></figure></p>
-<p>struct redisServer {<br>    // …<br>    // 修改计数器<br>    long long dirty;<br>    //记录了保存条件的数组<br>    struct saveparam *saveparams;</p>
-<pre><code>//上一次执行保存时间
-time_t lastsave;
-// ...
-</code></pre><p>}<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">saveparams 属性是一个数组，数组中的每一个元素都是一个 saveparam 结构，每一个saveparam 结构都把保存了一个save 选项设置的保存条件。</div></pre></td></tr></table></figure></p>
-<p>struct saveparam{<br>//秒数<br>time_t seconds;<br>//修改次数<br>int changes;<br>}<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line">![save 配置数据库存储状态](/uploads/saveparam.png)</div><div class="line"></div><div class="line">##### dirty计数器 和lastsave 属性</div><div class="line">* dirty 记录距上一次成功save 后，服务器执行的修改次数；</div><div class="line">* lastsave 记录上一次成功进行保存后的Unix时间戳；</div><div class="line"></div><div class="line">服务器的常规性维护操作，时间事件，serverCron 其中一项就是检查save设置的保存条件是否满足，就是那服务器状态中的dirty 与saveparam 中的changes进行比较。还有当前时间减去服务器状态中的lastsave 时间和saveparam 中的seconds 比较。</div><div class="line"></div><div class="line">##### rdb文件的结构</div><div class="line"></div><div class="line">REDIS | db_version | databases | EOF | checkout_sum</div><div class="line"></div><div class="line"></div><div class="line">### AOF 持久化</div><div class="line"></div><div class="line">#### AOF持久化的实现</div><div class="line"> 与RDB持久化通过保存数据库中的键值对来记录数据库的状态不同，AOF 持久化是通过保存Redis服务器的写命令来记录数据库的状态的。</div><div class="line"> </div><div class="line"> 客户端  ————————》 发送写命令 ————》 服务器 ----&gt; 保存被执行的写命令 ——————》 AOF 文件</div><div class="line"></div><div class="line">##### 命令追加</div><div class="line"></div><div class="line">当AOF 持久化功能处于打开状态时，服务器在执行完一个写命令后，会以协议格式，将执行的命令追加到服务器状态的aof_buf 缓冲区的末尾；</div></pre></td></tr></table></figure></p>
-<p>struct redisServer {<br>    // …<br>    // AOF 缓冲区<br>    sds aof_buf；<br>    // …<br>}；<br>```</p>
-<h5 id="AOF-文件的写入和同步"><a href="#AOF-文件的写入和同步" class="headerlink" title="AOF 文件的写入和同步"></a>AOF 文件的写入和同步</h5><p>redis服务器进程就是一个事件循环，这个循环中的文件事件负责接收客户端的请求，以及向客户端发送命令回复，而时间事件，负责执行像 serverCron 函数这样需要定时运行的函数；</p>
-<p>服务器在执行文件事件时，可能执行一些写命令，使得一些内容被追加到服务器状态aof_buf 缓冲区，所以在服务器每次循环事件执行前，他都会调用 flushAppendOnlyFile函数，考虑是否将缓冲区的数据斜土和保存到AOF文件。</p>
-<p>flushAppendOnlyFile 函数的行为有服务器配置的appendfsync 选项的值来决定；</p>
-<ul>
-<li>always</li>
-<li>everysec</li>
-<li>no 将丢失上次同步之后所有的数据</li>
-</ul>
-<p><img src="/uploads/aofsyn.png" alt="AOF 文件同步策略"></p>
-<h5 id="aof-文件的载入和还原"><a href="#aof-文件的载入和还原" class="headerlink" title="aof 文件的载入和还原"></a>aof 文件的载入和还原</h5><p>因为aof文件记录的是reids 写命令，而redis 的命令只能在客户端上下文中执行，而载入AOF 文件所使用的命令直接来源于AOF文件而不是网络连接，所以服务器创建了一个没有网络连接的伪客户端。来执行从AOF文件中分析出来的命令。</p>
-<h4 id="AOF-重写"><a href="#AOF-重写" class="headerlink" title="AOF 重写"></a>AOF 重写</h4><p>问题：为什么要重写？重写时以什么为参照物？重写的文件有什么好处？</p>
-<ul>
-<li>因为Aof 持久化是通过保存被执行的命令，来记录数据库状态的，所以随着服务器运行时间的流逝，AOF 文件中的内容会越来越多，提及越来越大，不加以控制，会对服务器的运行造成影响，而且利用Aof 的还原数据非常耗时。</li>
-<li>重写时，并不以老的AOF 文件为基准，而是重新读取数据库状态，创建一个新的AOf 文件。来替换老的AOF文件。来减少那些冗余命令所占空间。</li>
-<li>假如一个集合，每次增加操作，往里面push 一个数据，最后这个集合一共有十万条数据，那就是十万条命令，要存到AOF文件里面去。但是重写后，单条命令 SADD 命令可以一次添加 64 个元素，原来的十万条命令，重写后，缩小了64倍。</li>
-</ul>
-<h4 id="AOF-后台重写"><a href="#AOF-后台重写" class="headerlink" title="AOF 后台重写"></a>AOF 后台重写</h4><p>AOF从写程序 aof_rewrite函数会进行大量的写入操作，redis作为一个单线程程序，如果主线程来调用这个函数，势必会造成线程的长时间阻塞，这是redis所不允许的，和RDB 一样AOF重写，也会调用子线程来进行重写操作。但是有稍微区别，AOF 后台重写，并不是全程无阻塞；</p>
-<p><img src="/uploads/aofrewrite.png" alt="aof后台重写"></p>
-<p>当子线程开启后，所有客户端的写命令，都会追加到aof缓冲区和aof重写缓冲区，子线程重写完后，向父进程发送一个信号函数，父进程进入阻塞状态，并将aof重写缓冲区数据刷入新的AOF文件，原子的替换掉现有的AOF文件。</p>
-
           
         
       
@@ -1111,129 +1242,6 @@ time_t lastsave;
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="http://pangyq.cn/2017/01/07/redis入门篇-02/">
-
-  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
-    <meta itemprop="name" content="YueQiang Pang">
-    <meta itemprop="description" content="">
-    <meta itemprop="image" content="/uploads/avatar.jpg">
-  </span>
-
-  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-    <meta itemprop="name" content="庞跃强的个人博客">
-    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
-      <img style="display:none;" itemprop="url image" alt="庞跃强的个人博客" src="">
-    </span>
-  </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2017/01/07/redis入门篇-02/" itemprop="url">
-                  redis入门篇-02
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-01-07T18:50:40+08:00">
-                2017-01-07
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <a href="/2017/01/07/redis入门篇-02/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2017/01/07/redis入门篇-02/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
   <link itemprop="mainEntityOfPage" href="http://pangyq.cn/2017/01/06/redis入门篇-01/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1733,7 +1741,7 @@ time_t lastsave;
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">8</span>
+              <span class="site-state-item-count">7</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
