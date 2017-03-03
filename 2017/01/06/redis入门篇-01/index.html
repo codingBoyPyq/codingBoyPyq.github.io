@@ -84,35 +84,17 @@
 
 
 
-<meta name="description" content="前言本系列文章，只是针对redis的一个初步认识了解，对redis的数据类型的一些介绍，对redis常用命令的一些介绍，及redis的事务和消息系统，平常开发中的一些使用，适合初级小白，因为写这篇文章的时候我也是一个小白，下面开始打怪升级。
-redis 背景###首先要清楚三个问题 
-
-redis是谁搞出来的（装逼专用）
-redis是个神马玩意？
-为什么会出来这么个玩意？
-这玩意为什么会迅速的火起">
+<meta name="description" content="前言本系列文章，只是针对redis的一个初步认识了解，对redis的数据类型的一些介绍，对redis常用命令的一些介绍，及redis的事务和消息系统，平常开发中的一些使用，适合初级小白，因为写这篇文章的时候我也是一个小白，下面开始打怪升级。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="redis入门篇-01">
 <meta property="og:url" content="http://pangyq.cn/2017/01/06/redis入门篇-01/index.html">
 <meta property="og:site_name" content="庞跃强的个人博客">
-<meta property="og:description" content="前言本系列文章，只是针对redis的一个初步认识了解，对redis的数据类型的一些介绍，对redis常用命令的一些介绍，及redis的事务和消息系统，平常开发中的一些使用，适合初级小白，因为写这篇文章的时候我也是一个小白，下面开始打怪升级。
-redis 背景###首先要清楚三个问题 
-
-redis是谁搞出来的（装逼专用）
-redis是个神马玩意？
-为什么会出来这么个玩意？
-这玩意为什么会迅速的火起">
+<meta property="og:description" content="前言本系列文章，只是针对redis的一个初步认识了解，对redis的数据类型的一些介绍，对redis常用命令的一些介绍，及redis的事务和消息系统，平常开发中的一些使用，适合初级小白，因为写这篇文章的时候我也是一个小白，下面开始打怪升级。">
 <meta property="og:image" content="http://pangyq.cn/uploads/redis-run.png">
-<meta property="og:updated_time" content="2017-01-07T10:41:17.000Z">
+<meta property="og:updated_time" content="2017-03-03T04:12:35.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="redis入门篇-01">
-<meta name="twitter:description" content="前言本系列文章，只是针对redis的一个初步认识了解，对redis的数据类型的一些介绍，对redis常用命令的一些介绍，及redis的事务和消息系统，平常开发中的一些使用，适合初级小白，因为写这篇文章的时候我也是一个小白，下面开始打怪升级。
-redis 背景###首先要清楚三个问题 
-
-redis是谁搞出来的（装逼专用）
-redis是个神马玩意？
-为什么会出来这么个玩意？
-这玩意为什么会迅速的火起">
+<meta name="twitter:description" content="前言本系列文章，只是针对redis的一个初步认识了解，对redis的数据类型的一些介绍，对redis常用命令的一些介绍，及redis的事务和消息系统，平常开发中的一些使用，适合初级小白，因为写这篇文章的时候我也是一个小白，下面开始打怪升级。">
 <meta name="twitter:image" content="http://pangyq.cn/uploads/redis-run.png">
 
 
@@ -417,6 +399,7 @@ redis是个神马玩意？
 
       
         <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>本系列文章，只是针对redis的一个初步认识了解，对redis的数据类型的一些介绍，对redis常用命令的一些介绍，及redis的事务和消息系统，平常开发中的一些使用，适合初级小白，因为写这篇文章的时候我也是一个小白，下面开始打怪升级。</p>
+<a id="more"></a>
 <h2 id="redis-背景"><a href="#redis-背景" class="headerlink" title="redis 背景"></a>redis 背景</h2><p>###首先要清楚三个问题 </p>
 <ul>
 <li>redis是谁搞出来的（装逼专用）</li>

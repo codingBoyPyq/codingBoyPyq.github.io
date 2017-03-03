@@ -96,7 +96,7 @@ redis 是由C语言实现的，但是并没有直接使用C语言定义的字符
 <meta property="og:image" content="http://pangyq.cn/uploads/list.png">
 <meta property="og:image" content="http://pangyq.cn/uploads/haxitable.png">
 <meta property="og:image" content="http://pangyq.cn/uploads/k1k0.png">
-<meta property="og:updated_time" content="2017-03-01T02:49:50.000Z">
+<meta property="og:updated_time" content="2017-03-03T04:13:11.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="redis的设计与实现-01数据结构与对象">
 <meta name="twitter:description" content="01-简单动态字符串 SDS   simple-dynamic-string
@@ -407,6 +407,7 @@ redis 是由C语言实现的，但是并没有直接使用C语言定义的字符
         <h2 id="01-简单动态字符串-SDS-simple-dynamic-string"><a href="#01-简单动态字符串-SDS-simple-dynamic-string" class="headerlink" title="01-简单动态字符串 SDS   simple-dynamic-string"></a>01-简单动态字符串 SDS   simple-dynamic-string</h2><blockquote>
 <p>redis 是由C语言实现的，但是并没有直接使用C语言定义的字符串（以空字符结尾的字符数组），而是自己构建了一种名为sds字符串的抽象类型。并将sds作为redis的默认字符串表示。<br>在redis里，C字符串只会用作字符串字面量，用在一些无需对字符串修改的地方，比如日志打印。在redis中，<code>&lt;</code>K,V<code>&gt;</code> 的K和V都是字符串，或者V是字符串列表的情况下，对象的底层都是存储的sds类型的字符串。</p>
 </blockquote>
+<a id="more"></a>
 <h4 id="sds的定义"><a href="#sds的定义" class="headerlink" title="sds的定义"></a>sds的定义</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">struct sdshdr &#123;</div><div class="line">	//记录buf数组中已经使用字节的数量</div><div class="line">	//等于sds所保存的字符串的长度</div><div class="line">	int len;</div><div class="line">	//记录buf数组中未使用字节的数量</div><div class="line">	int free;</div><div class="line">	//字节数组，用于保存字符串</div><div class="line">	char[] buf[];</div><div class="line">&#125;</div></pre></td></tr></table></figure>
 <p>Redis sds存储示例1：</p>
 <table>

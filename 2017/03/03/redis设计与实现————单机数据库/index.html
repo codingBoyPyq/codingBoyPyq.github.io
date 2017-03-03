@@ -84,30 +84,21 @@
 
 
 
-<meta name="description" content="服务器中的数据库redis服务器将所有的数据库都保存在服务器状态，redis.h/rediserver结构的db数组里面，db数组额每一项都是一个redis.h/redisDb结构，每一个redisDb结构代表一个数据库。在初始化服务器的时候，程序会根据服务器状态的dbnum属性，来决定应该创建多少个数据库。
-struct redisServer{
-//服务器数据库的数量
-    int dbNu">
+<meta name="description" content="服务器中的数据库redis服务器将所有的数据库都保存在服务器状态，redis.h/rediserver结构的db数组里面，db数组额每一项都是一个redis.h/redisDb结构，每一个redisDb结构代表一个数据库。在初始化服务器的时候，程序会根据服务器状态的dbnum属性，来决定应该创建多少个数据库。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="redis设计与实现————单机数据库">
 <meta property="og:url" content="http://pangyq.cn/2017/03/03/redis设计与实现————单机数据库/index.html">
 <meta property="og:site_name" content="庞跃强的个人博客">
-<meta property="og:description" content="服务器中的数据库redis服务器将所有的数据库都保存在服务器状态，redis.h/rediserver结构的db数组里面，db数组额每一项都是一个redis.h/redisDb结构，每一个redisDb结构代表一个数据库。在初始化服务器的时候，程序会根据服务器状态的dbnum属性，来决定应该创建多少个数据库。
-struct redisServer{
-//服务器数据库的数量
-    int dbNu">
+<meta property="og:description" content="服务器中的数据库redis服务器将所有的数据库都保存在服务器状态，redis.h/rediserver结构的db数组里面，db数组额每一项都是一个redis.h/redisDb结构，每一个redisDb结构代表一个数据库。在初始化服务器的时候，程序会根据服务器状态的dbnum属性，来决定应该创建多少个数据库。">
 <meta property="og:image" content="http://pangyq.cn/uploads/expires.png">
 <meta property="og:image" content="http://pangyq.cn/uploads/expireCheck.png">
 <meta property="og:image" content="http://pangyq.cn/uploads/saveparam.png">
 <meta property="og:image" content="http://pangyq.cn/uploads/aofsyn.png">
 <meta property="og:image" content="http://pangyq.cn/uploads/aofrewrite.png">
-<meta property="og:updated_time" content="2017-03-03T03:44:09.000Z">
+<meta property="og:updated_time" content="2017-03-03T04:13:41.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="redis设计与实现————单机数据库">
-<meta name="twitter:description" content="服务器中的数据库redis服务器将所有的数据库都保存在服务器状态，redis.h/rediserver结构的db数组里面，db数组额每一项都是一个redis.h/redisDb结构，每一个redisDb结构代表一个数据库。在初始化服务器的时候，程序会根据服务器状态的dbnum属性，来决定应该创建多少个数据库。
-struct redisServer{
-//服务器数据库的数量
-    int dbNu">
+<meta name="twitter:description" content="服务器中的数据库redis服务器将所有的数据库都保存在服务器状态，redis.h/rediserver结构的db数组里面，db数组额每一项都是一个redis.h/redisDb结构，每一个redisDb结构代表一个数据库。在初始化服务器的时候，程序会根据服务器状态的dbnum属性，来决定应该创建多少个数据库。">
 <meta name="twitter:image" content="http://pangyq.cn/uploads/expires.png">
 
 
@@ -412,6 +403,7 @@ struct redisServer{
 
       
         <h2 id="服务器中的数据库"><a href="#服务器中的数据库" class="headerlink" title="服务器中的数据库"></a>服务器中的数据库</h2><p>redis服务器将所有的数据库都保存在服务器状态，redis.h/rediserver结构的db数组里面，db数组额每一项都是一个redis.h/redisDb结构，每一个redisDb结构代表一个数据库。在初<br>始化服务器的时候，程序会根据服务器状态的dbnum属性，来决定应该创建多少个数据库。</p>
+<a id="more"></a>
 <pre><code>struct redisServer{
 //服务器数据库的数量
     int dbNum;
