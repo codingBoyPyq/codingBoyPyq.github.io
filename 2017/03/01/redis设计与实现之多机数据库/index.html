@@ -90,10 +90,7 @@ SLAVEOF命令 或者 配置 slaveof 选项
 而对主服务器进行复制的服务器称为从服务器 slave
 
 服务器A：127.0.0.1:6379   
-服务器B: 127.0.0.1:6380 
-让服务器B去复制服务器A的数据
-1127.0.0.1:6380&amp;gt; slaveof 127.0.0.1 6379
-15">
+服务器B: 127.0.0.1:6380">
 <meta property="og:type" content="article">
 <meta property="og:title" content="redis设计与实现-----多机数据库">
 <meta property="og:url" content="http://pangyq.cn/2017/03/01/redis设计与实现之多机数据库/index.html">
@@ -104,13 +101,10 @@ SLAVEOF命令 或者 配置 slaveof 选项
 而对主服务器进行复制的服务器称为从服务器 slave
 
 服务器A：127.0.0.1:6379   
-服务器B: 127.0.0.1:6380 
-让服务器B去复制服务器A的数据
-1127.0.0.1:6380&amp;gt; slaveof 127.0.0.1 6379
-15">
+服务器B: 127.0.0.1:6380">
 <meta property="og:image" content="http://pangyq.cn/uploads/psync.png">
 <meta property="og:image" content="http://pangyq.cn/uploads/copyBuf.png">
-<meta property="og:updated_time" content="2017-03-03T10:22:47.000Z">
+<meta property="og:updated_time" content="2017-03-03T11:10:53.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="redis设计与实现-----多机数据库">
 <meta name="twitter:description" content="15章—复制相关命令 和 概念
@@ -119,10 +113,7 @@ SLAVEOF命令 或者 配置 slaveof 选项
 而对主服务器进行复制的服务器称为从服务器 slave
 
 服务器A：127.0.0.1:6379   
-服务器B: 127.0.0.1:6380 
-让服务器B去复制服务器A的数据
-1127.0.0.1:6380&amp;gt; slaveof 127.0.0.1 6379
-15">
+服务器B: 127.0.0.1:6380">
 <meta name="twitter:image" content="http://pangyq.cn/uploads/psync.png">
 
 
@@ -432,8 +423,7 @@ SLAVEOF命令 或者 配置 slaveof 选项
 <p>而对主服务器进行复制的服务器称为从服务器 slave</p>
 </blockquote>
 <p>服务器A：127.0.0.1:6379   </p>
-<p>服务器B: 127.0.0.1:6380 </p>
-<p>让服务器B去复制服务器A的数据</p>
+<p>服务器B: 127.0.0.1:6380<br><a id="more"></a><br>让服务器B去复制服务器A的数据</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">127.0.0.1:6380&gt; slaveof 127.0.0.1 6379</div></pre></td></tr></table></figure>
 <h2 id="15-1-旧版复制功能的实现"><a href="#15-1-旧版复制功能的实现" class="headerlink" title="15.1 旧版复制功能的实现"></a>15.1 旧版复制功能的实现</h2><blockquote>
 <p>redis的复制功能分为<strong>同步（sync）</strong>和<strong>命令传播 （command propagate）</strong> 两个操作；</p>
