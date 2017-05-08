@@ -299,6 +299,187 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="http://pangyq.cn/2017/05/08/设计模式01-工厂模式/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="YueQiang Pang">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/uploads/avatar.jpg">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="庞跃强的个人博客">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="庞跃强的个人博客" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/2017/05/08/设计模式01-工厂模式/" itemprop="url">
+                  设计模式01-工厂模式
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-05-08T23:44:16+08:00">
+                2017-05-08
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+              <span class="post-meta-divider">|</span>
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Design-Patterns/" itemprop="url" rel="index">
+                    <span itemprop="name">Design Patterns</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <a href="/2017/05/08/设计模式01-工厂模式/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2017/05/08/设计模式01-工厂模式/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <h2 id="Design-Patterns"><a href="#Design-Patterns" class="headerlink" title="Design Patterns"></a>Design Patterns</h2><p>请允许我用一个英文版的标题小小的装一下哔，毕竟你不懂一个大学四年没过英语四级的人的心痛，这也是小编挥之不去的黑历史啊！！！貌似跑偏了。。。 </p>
+<p>设计模式并不是一个一成不变的模式或者贴切的说模板，在我来说，他只是为了解决某一个问题，前辈们经过反复的验证，历经考验，代码设计经验额总结，它保证了代码的可重用性，易读性，良好的扩展性，可靠性，装逼一点说就是，他满足了软件开发，开闭原则，里氏代换原则，高内聚低耦合，等特性，并不是1+1必须等于2这种规范,根据业务的需要，适当的变形，选择合适的模式，就是最好的模式，当然大致原理是一样的。通俗地讲，就是解决某一个问题，这种编码用起来更爽，不至于让代码越来越臃肿不堪，提高阅读性，和扩展性。让代码变得更性感迷人，让人爱不释手。</p>
+<p>总体来说设计模式分为三大类：</p>
+<p>创建型模式共五种</p>
+<ul>
+<li>工厂方法模式</li>
+<li>抽象工厂模式</li>
+<li>单例模式</li>
+<li>建造者模式</li>
+<li>原型模式。</li>
+</ul>
+<p>结构型模式共七种：</p>
+<ul>
+<li>适配器模式</li>
+<li>装饰器模式</li>
+<li>代理模式</li>
+<li>外观模式</li>
+<li>桥接模式</li>
+<li>组合模式</li>
+<li>享元模式。</li>
+</ul>
+<p>行为型模式共十一种：</p>
+<ul>
+<li>策略模式</li>
+<li>模板方法模式、</li>
+<li>观察者模式、</li>
+<li>迭代子模式、</li>
+<li>责任链模式、</li>
+<li>命令模式、</li>
+<li>备忘录模式、</li>
+<li>状态模式、</li>
+<li>访问者模式、</li>
+<li>中介者模式、</li>
+<li>解释器模式。</li>
+</ul>
+<p>引用一张大能画的图，我相信你是看不懂的，没关系，看完本教程之后再回来看这张图，你会发现，</p>
+          <!--noindex-->
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2017/05/08/设计模式01-工厂模式/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
   <link itemprop="mainEntityOfPage" href="http://pangyq.cn/2017/03/03/redis设计与实现————单机数据库/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1343,7 +1524,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">7</span>
+              <span class="site-state-item-count">8</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
@@ -1351,7 +1532,7 @@
           
             <div class="site-state-item site-state-categories">
               <a href="/categories">
-                <span class="site-state-item-count">3</span>
+                <span class="site-state-item-count">4</span>
                 <span class="site-state-item-name">分类</span>
               </a>
             </div>
@@ -1360,7 +1541,7 @@
           
             <div class="site-state-item site-state-tags">
               <a href="/tags">
-                <span class="site-state-item-count">3</span>
+                <span class="site-state-item-count">4</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
