@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="redis," />
+  <meta name="keywords" content="Design Patterns," />
 
 
 
@@ -84,18 +84,21 @@
 
 
 
-<meta name="description" content="前言本系列文章，只是针对redis的一个初步认识了解，对redis的数据类型的一些介绍，对redis常用命令的一些介绍，及redis的事务和消息系统，平常开发中的一些使用，适合初级小白，因为写这篇文章的时候我也是一个小白，下面开始打怪升级。">
+<meta name="description" content="抽象工厂模式 Abstract Factory抽象工厂模式其实是对工厂方法的改进版，java语言是一种面向对象，面向接口编程的语言，对于那些共性特征进行抽取，封装，利用接口和抽象来实现软件设计的闭包原则（也就是对修改关闭，对扩展开放，实现一个热插拔的效果），一个拥有良好扩展性的程序，当要扩展一个功能的时候，不应该对原有代码进行修改，但是对扩展开放。
+针对上一章介绍的工厂方法模式，如果需要对功能进行">
 <meta property="og:type" content="article">
-<meta property="og:title" content="redis入门篇-01">
-<meta property="og:url" content="http://pangyq.cn/2017/01/06/redis入门篇-01/index.html">
+<meta property="og:title" content="设计模式02-抽象工厂模式">
+<meta property="og:url" content="http://pangyq.cn/2017/05/09/设计模式02-抽象工厂模式/index.html">
 <meta property="og:site_name" content="庞跃强的个人博客">
-<meta property="og:description" content="前言本系列文章，只是针对redis的一个初步认识了解，对redis的数据类型的一些介绍，对redis常用命令的一些介绍，及redis的事务和消息系统，平常开发中的一些使用，适合初级小白，因为写这篇文章的时候我也是一个小白，下面开始打怪升级。">
-<meta property="og:image" content="http://pangyq.cn/uploads/redis-run.png">
-<meta property="og:updated_time" content="2017-03-03T04:12:35.000Z">
+<meta property="og:description" content="抽象工厂模式 Abstract Factory抽象工厂模式其实是对工厂方法的改进版，java语言是一种面向对象，面向接口编程的语言，对于那些共性特征进行抽取，封装，利用接口和抽象来实现软件设计的闭包原则（也就是对修改关闭，对扩展开放，实现一个热插拔的效果），一个拥有良好扩展性的程序，当要扩展一个功能的时候，不应该对原有代码进行修改，但是对扩展开放。
+针对上一章介绍的工厂方法模式，如果需要对功能进行">
+<meta property="og:image" content="http://pangyq.cn/uploads/abstrctFactory.png">
+<meta property="og:updated_time" content="2017-05-09T17:17:08.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="redis入门篇-01">
-<meta name="twitter:description" content="前言本系列文章，只是针对redis的一个初步认识了解，对redis的数据类型的一些介绍，对redis常用命令的一些介绍，及redis的事务和消息系统，平常开发中的一些使用，适合初级小白，因为写这篇文章的时候我也是一个小白，下面开始打怪升级。">
-<meta name="twitter:image" content="http://pangyq.cn/uploads/redis-run.png">
+<meta name="twitter:title" content="设计模式02-抽象工厂模式">
+<meta name="twitter:description" content="抽象工厂模式 Abstract Factory抽象工厂模式其实是对工厂方法的改进版，java语言是一种面向对象，面向接口编程的语言，对于那些共性特征进行抽取，封装，利用接口和抽象来实现软件设计的闭包原则（也就是对修改关闭，对扩展开放，实现一个热插拔的效果），一个拥有良好扩展性的程序，当要扩展一个功能的时候，不应该对原有代码进行修改，但是对扩展开放。
+针对上一章介绍的工厂方法模式，如果需要对功能进行">
+<meta name="twitter:image" content="http://pangyq.cn/uploads/abstrctFactory.png">
 
 
 
@@ -123,13 +126,13 @@
 
 
 
-  <link rel="canonical" href="http://pangyq.cn/2017/01/06/redis入门篇-01/"/>
+  <link rel="canonical" href="http://pangyq.cn/2017/05/09/设计模式02-抽象工厂模式/"/>
 
 
 
 
 
-  <title> redis入门篇-01 | 庞跃强的个人博客 </title>
+  <title> 设计模式02-抽象工厂模式 | 庞跃强的个人博客 </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -300,7 +303,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-  <link itemprop="mainEntityOfPage" href="http://pangyq.cn/2017/01/06/redis入门篇-01/">
+  <link itemprop="mainEntityOfPage" href="http://pangyq.cn/2017/05/09/设计模式02-抽象工厂模式/">
 
   <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <meta itemprop="name" content="YueQiang Pang">
@@ -324,7 +327,7 @@
             
             
               
-                redis入门篇-01
+                设计模式02-抽象工厂模式
               
             
           </h1>
@@ -337,8 +340,8 @@
                 <i class="fa fa-calendar-o"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-01-06T11:56:45+08:00">
-                2017-01-06
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-05-09T23:52:51+08:00">
+                2017-05-09
               </time>
             
 
@@ -356,8 +359,8 @@
               <span class="post-meta-item-text">分类于</span>
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/redis/" itemprop="url" rel="index">
-                    <span itemprop="name">redis</span>
+                  <a href="/categories/Design-Patterns/" itemprop="url" rel="index">
+                    <span itemprop="name">Design Patterns</span>
                   </a>
                 </span>
 
@@ -371,8 +374,8 @@
             
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
-                <a href="/2017/01/06/redis入门篇-01/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2017/01/06/redis入门篇-01/" itemprop="commentCount"></span>
+                <a href="/2017/05/09/设计模式02-抽象工厂模式/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2017/05/09/设计模式02-抽象工厂模式/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -398,60 +401,19 @@
       
 
       
-        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>本系列文章，只是针对redis的一个初步认识了解，对redis的数据类型的一些介绍，对redis常用命令的一些介绍，及redis的事务和消息系统，平常开发中的一些使用，适合初级小白，因为写这篇文章的时候我也是一个小白，下面开始打怪升级。</p>
+        <h2 id="抽象工厂模式-Abstract-Factory"><a href="#抽象工厂模式-Abstract-Factory" class="headerlink" title="抽象工厂模式 Abstract Factory"></a>抽象工厂模式 Abstract Factory</h2><p>抽象工厂模式其实是对工厂方法的改进版，java语言是一种面向对象，面向接口编程的语言，对于那些共性特征进行抽取，封装，利用接口和抽象来实现软件设计的闭包原则（也就是对修改关闭，对扩展开放，实现一个热插拔的效果），一个拥有良好扩展性的程序，当要扩展一个功能的时候，不应该对原有代码进行修改，但是对扩展开放。</p>
+<p>针对上一章介绍的工厂方法模式，如果需要对功能进行扩展，现在要实现一个发送及时消息的功能，首先要建一个 CurrentMsgSender类，但是工厂方法内部，势必要加入针对新加入 CurrentMsgSender 对象的实例化方法。这就违反了软件设计的闭包原则。所以抽象工厂模式，其实是对工厂方法模式的进一步抽象。</p>
 <a id="more"></a>
-<h2 id="redis-背景"><a href="#redis-背景" class="headerlink" title="redis 背景"></a>redis 背景</h2><p>###首先要清楚三个问题 </p>
-<ul>
-<li>redis是谁搞出来的（装逼专用）</li>
-<li>redis是个神马玩意？</li>
-<li>为什么会出来这么个玩意？</li>
-<li>这玩意为什么会迅速的火起来的？</li>
-</ul>
-<p>2008年，意大利的一家创业公司 Merzia 推出了一款基于mysql的网站实时统计系统 LLOOGG,然而没过多久该公司的创始人 Salvatore Sanfilippo 便开始对mysql的性能感到失望，这家伙也是艺高人胆大，亲自为 LLOOGG量身定做了一个数据库，2009年开发完成，这个数据库就是redis，并大发善心，将redis开源，很快在程序员界圈粉无数，国内大量的互联网公司相继使用，例如新浪微博，知乎，街旁网等。国外的github，暴雪，等一大批粉丝。圈粉狂魔也不为过，小编我也没逃脱它的魔抓。</p>
-<p>Redis 是一个高性能的key-value数据库。主要是存储数据，纳尼，数据库小编可是知道不少，比如mysql,oricle 这两个风靡全球的数据库。这就要说一下redis与mysql区别了。最本质的区别是两者数据存放的位置，和 存储的数据结构。mysql这类关系型数据库数据主要存储在本地磁盘，且存储的都是结构型数据，众所周知的mysql中的那一张一张的表，每个表每一行的数据结构都是固定的。redis主要把数据存储在内存中，也可持久化存储，或者log存储，且存储数据格式为非结构化数据。</p>
-<p>redis 的出现主要解决的是，伴随着互联网的高速发展，大数据量，高并发，越来越多的非结构话数据的存储需求，传统的关系型数据库大量的Io读取，性能很快出现瓶颈，越来越无法满足web2.0 频繁的页面交互。一些场景无法满足。而redis 灵活的数据模型，高性能的读写能力，良好的扩展性 极大的满足了关系型数据库的一些不足。</p>
-<p>nosql和关系型数据库的区别 <a href="http://www.infoq.com/cn/news/2011/01/nosql-why/" target="_blank" rel="external">here</a></p>
-<h2 id="redis的安装"><a href="#redis的安装" class="headerlink" title="redis的安装"></a>redis的安装</h2><p>主要是针对 linux 系统，本文测试系统主要 mac os x 10.10.5</p>
-<p>官方网站：[here] (<a href="http://redis.io" target="_blank" rel="external">http://redis.io</a>)</p>
-<p>安装 </p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">$ wget http://download.redis.io/releases/redis-3.2.6.tar.gz</div><div class="line">$ tar xzf redis-3.2.6.tar.gz</div><div class="line">$ cd redis-3.2.6</div><div class="line">$ make</div></pre></td></tr></table></figure>
-<p>进入根目录的src目录，里面罗列了好多redis可执行的程序命令 其中分不同的语言版本</p>
-<table>
-<thead>
-<tr>
-<th>文件名</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>redis-server</td>
-<td>redis 服务器启动程序</td>
-</tr>
-<tr>
-<td>redis-cli</td>
-<td>redis 命令行客户端</td>
-</tr>
-<tr>
-<td>redis-benchmark</td>
-<td>redis 性能测试工具</td>
-</tr>
-<tr>
-<td>redis-check-aof</td>
-<td>AOF文件修复工具</td>
-</tr>
-<tr>
-<td>redis-check-dump</td>
-<td>RDB文件检查工具</td>
-</tr>
-</tbody>
-</table>
-<p>启动redis</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">pangyueqiangdediannao:src pangyueqiang$ ./redis-server</div><div class="line">//自定义端口启动  ./redis-server --port 6380 </div><div class="line">//当然这些都可以在自定义 redis.config 里面配置，启动的时候加载自定义配置文件就行了。</div></pre></td></tr></table></figure>
-<p><img src="/uploads/redis-run.png" alt="启动界面"></p>
-<p>启动信息可以看到，warning：没有自定义个性化的config，系统自动加载默认的config。如果想加载自定义配置，启动时，在后面追加上 自定义的redis.config配置文件路径 这个参数，就会按照自定义的配置信息启动。进程id：3264，端口号：6379 ，端口号是九宫格键盘上 MERZ 对应的数字，MERZ 是意大利一名歌女的名字。看来写的一首好代码也是有用的，哼哼。。</p>
-<p>另起一个窗口，进入redis根目录/src 下，启动redis命令行客户端。先set一个值look一下。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">pangyueqiangdediannao:src pangyueqiang$ ./redis-cli</div><div class="line">//当然也可以指定ip 和端口进行连接 </div><div class="line">//./redis-cli </div><div class="line">127.0.0.1:6379&gt; get foo</div><div class="line">(nil)</div><div class="line">127.0.0.1:6379&gt; set foo hello word</div><div class="line">(error) ERR syntax error</div><div class="line">127.0.0.1:6379&gt; set foo &quot;hello word&quot;</div><div class="line">OK</div><div class="line">127.0.0.1:6379&gt; get foo</div><div class="line">&quot;hello word&quot;</div><div class="line">127.0.0.1:6379&gt;</div></pre></td></tr></table></figure>
+<p>直接上代码：</p>
+<blockquote>
+<p>为了便于阅读理解，类名，接口名 ，方法名 直接中文代替。其实java也支持中文命名的</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div></pre></td><td class="code"><pre><div class="line">public interface 运输工具 &#123;  </div><div class="line">    public void 运输();  </div><div class="line">&#125;  </div><div class="line">public class 轿车 implements 运输工具 &#123;  </div><div class="line">    @Override  </div><div class="line">    public void 运输() &#123;  </div><div class="line">        System.out.println(&quot;我会载人的！！&quot;);  </div><div class="line">    &#125;  </div><div class="line">&#125;  </div><div class="line">public class 货车 implements 运输工具 &#123;  </div><div class="line">  </div><div class="line">    @Override  </div><div class="line">    public void 运输() &#123;  </div><div class="line">        System.out.println(&quot;我是拉货的！&quot;);  </div><div class="line">    &#125;  </div><div class="line">&#125; </div><div class="line"></div><div class="line">public interface 运输工具工厂 &#123;  </div><div class="line">    public 运输工具 produce();  </div><div class="line">&#125;  </div><div class="line"> </div><div class="line">public class 轿车工厂 implements 运输工具工厂 &#123;  </div><div class="line">      </div><div class="line">    @Override  </div><div class="line">    public 运输工具 produce()&#123;  </div><div class="line">        return new 轿车();  </div><div class="line">    &#125;  </div><div class="line">&#125;  </div><div class="line">public class 货车工厂 implements 运输工具工厂&#123;  </div><div class="line">  </div><div class="line">    @Override  </div><div class="line">    public 运输工具 produce() &#123;  </div><div class="line">        return new 货车();  </div><div class="line">    &#125;  </div><div class="line">&#125;  </div><div class="line"></div><div class="line"></div><div class="line">public class Test &#123;  </div><div class="line"> </div><div class="line">    public static void main(String[] args) &#123;  </div><div class="line">        运输工具工厂 货车工厂 = new 货车工厂();  </div><div class="line">        货车 金杯 = 货车工厂.produce();  </div><div class="line">        金杯.运输();  </div><div class="line">    &#125;  </div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h3><p>在上一章的工厂方法模式中，所有的运输工具都在一个工厂进行生产，如果将来要发明时光机，也要交给这个工厂，越来越多，这个工厂维护成本就越来愈大，将来说不定牵一发而动全身。</p>
+<p>但是在抽象工厂模式中，只要有新的运输工具，就新建一个工厂，大家各自生产各自的，谁也不碍谁的事，实现热插拔，水平扩展。</p>
+<p>与工厂方法模式的区别：<br>静态工厂方法模式是提供一个工厂类，对同一个Sender接口的不同实现类，工厂内部实现不同的工厂方法去实例化对象。<br>缺点，当新增Sender接口的实现类时，势必要去修改已有工厂类内部代码，不易水平扩展，违反闭包原则。</p>
+<p>上一章工厂方法模式 改为 抽象工厂模式 实现 示例图</p>
+<p><img src="/uploads/abstrctFactory.png" alt="抽象工厂结构图"></p>
 
       
     </div>
@@ -480,7 +442,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/redis/" rel="tag"># redis</a>
+            <a href="/tags/Design-Patterns/" rel="tag"># Design Patterns</a>
           
         </div>
       
@@ -489,8 +451,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2016/11/19/测试draft/" rel="next" title="测试draft">
-                <i class="fa fa-chevron-left"></i> 测试draft
+              <a href="/2017/05/08/设计模式01-工厂模式/" rel="next" title="设计模式01-工厂模式">
+                <i class="fa fa-chevron-left"></i> 设计模式01-工厂模式
               </a>
             
           </div>
@@ -498,10 +460,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2017/02/04/mysql性能优化之explain/" rel="prev" title="mysql性能优化之explain">
-                mysql性能优化之explain <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -533,8 +491,8 @@
           
   <div class="comments" id="comments">
     
-      <div class="ds-thread" data-thread-key="2017/01/06/redis入门篇-01/"
-           data-title="redis入门篇-01" data-url="http://pangyq.cn/2017/01/06/redis入门篇-01/">
+      <div class="ds-thread" data-thread-key="2017/05/09/设计模式02-抽象工厂模式/"
+           data-title="设计模式02-抽象工厂模式" data-url="http://pangyq.cn/2017/05/09/设计模式02-抽象工厂模式/">
       </div>
     
   </div>
@@ -642,7 +600,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#redis-背景"><span class="nav-number">2.</span> <span class="nav-text">redis 背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#redis的安装"><span class="nav-number">3.</span> <span class="nav-text">redis的安装</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#抽象工厂模式-Abstract-Factory"><span class="nav-number">1.</span> <span class="nav-text">抽象工厂模式 Abstract Factory</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#分析"><span class="nav-number">1.1.</span> <span class="nav-text">分析</span></a></li></ol></li></ol></div>
             
 
           </div>
